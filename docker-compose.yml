@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: countries-database
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-countries_db}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

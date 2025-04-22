@@ -7,9 +7,7 @@
     "lint": "eslint 'src//*.{ts,tsx}'",
     "lint:fix": "eslint 'src//*.{ts,tsx}' --fix",
     "dev": "npx tsx watch src/server.ts",
-    "db:generate": "drizzle-kit generate:pg",
-    "db:migrate": "ts-node drizzle/migrate.ts",
-    "db:push": "drizzle-kit push:pg"
+    "db:push": "npx drizzle-kit push"
   },
   "keywords": [],
   "author": "daniele-bolla <bolladaniele@gmail.com> (https://daniele-bolla.github.io/)",

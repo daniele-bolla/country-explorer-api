@@ -1,22 +1,20 @@
-import axios from 'axios';
-import { eq, like, and, gt, lt, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import config from '../config.js';
 
 import {
   countriesTable,
   Country,
-  countryCurrencies,
-  countryLanguages,
-  countryRelations,
+  countryCurrenciesTable,
+  countryLanguagesTable,
   currenciesTable,
   languagesTable,
+  regionsTable,
+  subregionsTable,
 } from '../db/schema.js';
 import {
   CountryApiInput,
-  CountryEntity,
-  CurrencyEntity,
-  LanguageEntity,
+  CurrencyInput,
+  LanguageInput,
 } from '../types/countryModel.js';
 export interface PaginationOptions {
   page?: number;
@@ -42,7 +40,6 @@ export const getCountries = async ({
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 
-  // Get total count (for pagination metadata)
   const [{ count }] = await db
     .select({
       count: sql`count(*)`.mapWith(Number),
@@ -59,7 +56,7 @@ export const getCountries = async ({
   };
 };
 
-async function addLanguage(lang: LanguageEntity) {
+async function addLanguage(lang: LanguageInput) {
   return await db.transaction(async (tx) => {
     const existingLanguage = await tx
       .select()
@@ -83,7 +80,7 @@ async function addLanguage(lang: LanguageEntity) {
   });
 }
 
-async function addCurrency(curr: CurrencyEntity) {
+async function addCurrency(curr: CurrencyInput) {
   return await db.transaction(async (tx) => {
     const existingCurrency = await tx
       .select()
@@ -141,7 +138,7 @@ export async function addCountry(input: CountryApiInput) {
   });
 }
 
-async function getCountryLanguages(country: Pick<CountryEntity, 'id'>) {
+async function getCountryLanguagesTable(country: Pick<Country, 'id'>) {
   const languages = await db
     .select({
       id: languagesTable.id,
@@ -150,14 +147,14 @@ async function getCountryLanguages(country: Pick<CountryEntity, 'id'>) {
     })
     .from(languagesTable)
     .innerJoin(
-      countryLanguages,
-      eq(languagesTable.id, countryLanguages.languageId),
+      countryLanguagesTable,
+      eq(languagesTable.id, countryLanguagesTable.languageId),
     )
-    .where(eq(countryLanguages.countryId, country.id));
+    .where(eq(countryLanguagesTable.countryId, country.id));
   return languages;
 }
 
-async function getCountryCurrencies(country: Pick<CountryEntity, 'id'>) {
+async function getCountryCurrenciesTable(country: Pick<Country, 'id'>) {
   const currencies = await db
     .select({
       id: currenciesTable.id,
@@ -166,10 +163,10 @@ async function getCountryCurrencies(country: Pick<CountryEntity, 'id'>) {
     })
     .from(currenciesTable)
     .innerJoin(
-      countryCurrencies,
-      eq(currenciesTable.id, countryCurrencies.currencyId),
+      countryCurrenciesTable,
+      eq(currenciesTable.id, countryCurrenciesTable.currencyId),
     )
-    .where(eq(countryCurrencies.countryId, country.id));
+    .where(eq(countryCurrenciesTable.countryId, country.id));
   return currencies;
 }
 
@@ -182,8 +179,6 @@ function getSearchQueryFromField(field: CountrySearchField, value: string) {
       return eq(countriesTable.name, value);
     case 'cca3':
       return eq(countriesTable.cca3, value);
-    case 'region':
-      return eq(countriesTable.region, value);
     default:
       throw new Error(`Unsupported field: ${field}`);
   }
@@ -200,9 +195,9 @@ export async function getCountryBy(field: CountrySearchField, value: any) {
       return null;
     }
 
-    const languages = await getCountryLanguages(country[0]);
+    const languages = await getCountryLanguagesTable(country[0]);
 
-    const currencies = await getCountryCurrencies(country[0]);
+    const currencies = await getCountryCurrenciesTable(country[0]);
 
     return {
       ...country[0],
@@ -223,12 +218,12 @@ export async function getCountriesByLanguage(languageCode: string) {
       })
       .from(countriesTable)
       .innerJoin(
-        countryLanguages,
-        eq(countriesTable.id, countryLanguages.countryId),
+        countryLanguagesTable,
+        eq(countriesTable.id, countryLanguagesTable.countryId),
       )
       .innerJoin(
         languagesTable,
-        eq(countryLanguages.languageId, languagesTable.id),
+        eq(countryLanguagesTable.languageId, languagesTable.id),
       )
       .where(eq(languagesTable.code, languageCode));
     if (countries.length === 0) {
@@ -237,8 +232,8 @@ export async function getCountriesByLanguage(languageCode: string) {
 
     return Promise.all(
       countries.map(async (row) => {
-        const languages = await getCountryLanguages(row.country);
-        const currencies = await getCountryCurrencies(row.country);
+        const languages = await getCountryLanguagesTable(row.country);
+        const currencies = await getCountryCurrenciesTable(row.country);
 
         return {
           ...row.country,
@@ -264,12 +259,12 @@ export async function getCountriesByCurrency(currencyCode: string) {
       })
       .from(countriesTable)
       .innerJoin(
-        countryCurrencies,
-        eq(countriesTable.id, countryCurrencies.countryId),
+        countryCurrenciesTable,
+        eq(countriesTable.id, countryCurrenciesTable.countryId),
       )
       .innerJoin(
         currenciesTable,
-        eq(countryCurrencies.currencyId, currenciesTable.id),
+        eq(countryCurrenciesTable.currencyId, currenciesTable.id),
       )
       .where(eq(currenciesTable.code, currencyCode));
 
@@ -279,8 +274,8 @@ export async function getCountriesByCurrency(currencyCode: string) {
 
     return Promise.all(
       countries.map(async (row) => {
-        const languages = await getCountryLanguages(row.country);
-        const currencies = await getCountryCurrencies(row.country);
+        const languages = await getCountryLanguagesTable(row.country);
+        const currencies = await getCountryCurrenciesTable(row.country);
 
         return {
           ...row.country,
@@ -294,6 +289,130 @@ export async function getCountriesByCurrency(currencyCode: string) {
       `Error fetching countries by currency ${currencyCode}:`,
       error,
     );
+    throw error;
+  }
+}
+
+export interface DeleteResult {
+  success: boolean;
+  country?: {
+    id: number;
+    name: string;
+  };
+  relationships: {
+    languages: number;
+    currencies: number;
+  };
+}
+
+export async function deleteCountry(id: number): Promise<DeleteResult> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [languageCount] = await tx
+        .select({ count: count() })
+        .from(countryLanguagesTable)
+        .where(eq(countryLanguagesTable.countryId, id));
+
+      const [currencyCount] = await tx
+        .select({ count: count() })
+        .from(countryCurrenciesTable)
+        .where(eq(countryCurrenciesTable.countryId, id));
+
+      const [country] = await tx
+        .select({
+          id: countriesTable.id,
+          name: countriesTable.name,
+          regionId: countriesTable.regionId,
+          subregionId: countriesTable.subregionId,
+          region: {
+            id: regionsTable.id,
+            name: regionsTable.name,
+          },
+          subregion: {
+            id: subregionsTable.id,
+            name: subregionsTable.name,
+          },
+        })
+        .from(countriesTable)
+        .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+        .leftJoin(
+          subregionsTable,
+          eq(countriesTable.subregionId, subregionsTable.id),
+        )
+        .where(eq(countriesTable.id, id))
+        .limit(1);
+
+      if (!country) {
+        return {
+          success: false,
+          relationships: { languages: 0, currencies: 0 },
+        };
+      }
+
+      await tx.delete(countriesTable).where(eq(countriesTable.id, id));
+
+      const deletedSubregions = await tx
+        .delete(subregionsTable)
+        .where(
+          notInArray(
+            subregionsTable.id,
+            tx
+              .select({ id: countriesTable.subregionId })
+              .from(countriesTable)
+              .where(isNotNull(countriesTable.subregionId)),
+          ),
+        )
+        .returning();
+
+      const deletedRegions = await tx
+        .delete(regionsTable)
+        .where(
+          and(
+            notInArray(
+              regionsTable.id,
+              tx
+                .select({ id: countriesTable.regionId })
+                .from(countriesTable)
+                .where(isNotNull(countriesTable.regionId)),
+            ),
+            notInArray(
+              regionsTable.id,
+              tx.select({ id: subregionsTable.regionId }).from(subregionsTable),
+            ),
+          ),
+        )
+        .returning();
+
+      return {
+        success: true,
+        country: {
+          id: country.id,
+          name: country.name,
+          region: country.region?.name
+            ? {
+                id: country.region.id,
+                name: country.region.name,
+              }
+            : null,
+          subregion: country.subregion?.name
+            ? {
+                id: country.subregion.id,
+                name: country.subregion.name,
+              }
+            : null,
+        },
+        relationships: {
+          languages: languageCount?.count || 0,
+          currencies: currencyCount?.count || 0,
+        },
+        cleanup: {
+          regions: deletedRegions.length,
+          subregions: deletedSubregions.length,
+        },
+      };
+    });
+  } catch (error) {
+    console.error(`Error deleting country ID ${id}:`, error);
     throw error;
   }
 }

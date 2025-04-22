@@ -9,7 +9,6 @@ import {
   timestamp,
   primaryKey,
   boolean,
-  real,
 } from 'drizzle-orm/pg-core';
 
 export const regionsTable = pgTable('regions', {
@@ -55,7 +54,6 @@ export const currenciesTable = pgTable('currencies', {
   id: serial('id').primaryKey(),
   code: varchar('code', { length: 10 }).notNull().unique(),
   name: varchar('name', { length: 100 }).notNull(),
-  symbol: varchar('symbol', { length: 10 }),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

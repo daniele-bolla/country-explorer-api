@@ -48,8 +48,8 @@ const init = async () => {
 
     if (result.count === 0) {
       console.log('Database is empty. Loading initial country data...');
-      const syncResult = await importCountries();
-      console.log('Initial data loaded:', syncResult);
+      // const syncResult = await importCountries();
+      // console.log('Initial data loaded:', syncResult);
     } else {
       console.log(`Database already contains ${result.count} countries.`);
     }

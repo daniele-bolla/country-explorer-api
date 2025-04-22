@@ -4,11 +4,38 @@ import Joi from 'joi';
 import { ServerRoute } from '@hapi/hapi';
 
 import {
-  createCountry,
+  createCountryHandler,
   deleteCountryHandler,
   getAllCountriesHandler,
+  getCountryHandler,
   updateCountryHandler,
 } from '../handlers/countryHandlers.js';
+import {
+  createCountryValidation,
+  deleteCountryValidation,
+  getCountryByIdValidation,
+  gettAllCountriesValidation,
+} from '../validations/countiryValidation.js';
+
+const errorValidationHandler = {
+  options: {
+    stripUnknown: true,
+    abortEarly: false,
+  },
+  failAction: (request: any, h: any, err: any) => {
+    const error = Boom.badRequest('Invalid request query parameters');
+    error.output.payload.validation = {
+      source: 'query',
+      errors: err.details.map((detail: any) => ({
+        message: detail.message,
+        path: detail.path,
+        type: detail.type,
+        context: detail.context,
+      })),
+    };
+    throw error;
+  },
+};
 
 export default {
   name: 'countries',
@@ -20,95 +47,22 @@ export default {
         handler: getAllCountriesHandler,
         options: {
           validate: {
-            query: Joi.object({
-              field: Joi.string()
-                .valid('code', 'name', 'region', 'languages', 'currencies')
-                .optional(),
-              value: Joi.string().optional(),
-              pageSize: Joi.number()
-                .integer()
-                .min(1)
-                .max(100)
-                .default(50)
-                .optional(),
-              page: Joi.number().integer().min(0).default(0).optional(),
-            }),
-            options: {
-              stripUnknown: true,
-              abortEarly: false,
-            },
-            failAction: (request, h, err) => {
-              const error = Boom.badRequest('Invalid request query parameters');
-              error.output.payload.validation = {
-                source: 'query',
-                errors: (err as Joi.ValidationError).details.map((detail) => ({
-                  message: detail.message,
-                  path: detail.path,
-                  type: detail.type,
-                  context: detail.context,
-                })),
-              };
-              throw error;
-            },
+            ...gettAllCountriesValidation,
+            ...errorValidationHandler,
           },
           description: 'Get all countries',
-          tags: ['api', 'countries'],
-        },
-      },
-      {
-        method: 'GET',
-        path: '/countries/{field}/{value}',
-        handler: deleteCountryHandler,
-        options: {
-          validate: {
-            params: Joi.object({
-              field: Joi.string().valid('id', 'code', 'name').required(),
-              value: Joi.string().required(),
-            }),
-          },
-          description: 'Get country by field and value',
-          tags: ['api', 'countries'],
         },
       },
       {
         method: 'POST',
-        path: '/countries',
-        handler: createCountry,
+        path: '/api/countries',
         options: {
           validate: {
-            payload: Joi.object({
-              name: Joi.string().required(),
-              code: Joi.string().length(2).required(),
-              region: Joi.string().optional(),
-              subregion: Joi.string().optional(),
-              population: Joi.number().integer().optional(),
-              languages: Joi.array()
-                .items(
-                  Joi.alternatives().try(
-                    Joi.string(),
-                    Joi.object({
-                      code: Joi.string().required(),
-                      name: Joi.string().required(),
-                    }),
-                  ),
-                )
-                .optional(),
-              currencies: Joi.array()
-                .items(
-                  Joi.alternatives().try(
-                    Joi.string(),
-                    Joi.object({
-                      code: Joi.string().required(),
-                      name: Joi.string().required(),
-                    }),
-                  ),
-                )
-                .optional(),
-            }),
+            ...createCountryValidation,
+            ...errorValidationHandler,
           },
-          description: 'Create a new country',
-          tags: ['api', 'countries'],
         },
+        handler: createCountryHandler,
       },
       {
         method: 'PUT',
@@ -150,21 +104,30 @@ export default {
             }),
           },
           description: 'Update a country',
-          tags: ['api', 'countries'],
         },
       },
       {
         method: 'DELETE',
-        path: '/countries/{id}',
+        path: '/api/countries/{id}',
         handler: deleteCountryHandler,
         options: {
           validate: {
-            params: Joi.object({
-              id: Joi.number().integer().required(),
-            }),
+            ...deleteCountryValidation,
+            ...errorValidationHandler,
           },
           description: 'Delete a country',
-          tags: ['api', 'countries'],
+        },
+      },
+      {
+        method: 'GET',
+        path: '/api/countries/{id}',
+        handler: getCountryHandler,
+        options: {
+          validate: {
+            ...getCountryByIdValidation,
+            ...errorValidationHandler,
+          },
+          description: 'Get a country',
         },
       },
     ]);

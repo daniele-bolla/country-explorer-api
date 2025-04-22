@@ -1,100 +1,86 @@
 import Joi from 'joi';
 
-// Validation schemas for routes
-export const schemas = {
-  // Query parameters for listing countries
-  listCountries: Joi.object({
-    name: Joi.string().optional().description('Filter by country name'),
-    region: Joi.string().optional().description('Filter by region'),
-    subregion: Joi.string().optional().description('Filter by subregion'),
-    populationGt: Joi.number()
-      .optional()
-      .description('Filter by population greater than'),
-    populationLt: Joi.number()
-      .optional()
-      .description('Filter by population less than'),
+export const gettAllCountriesValidation = {
+  query: Joi.object({
+    field: Joi.string()
+      .valid('code', 'name', 'region', 'languages', 'currencies')
+      .optional(),
+    value: Joi.string().optional(),
+    pageSize: Joi.number().integer().min(1).max(100).default(50).optional(),
+    page: Joi.number().integer().min(0).default(0).optional(),
   }),
+};
 
-  // Path parameter validation for country ID
-  countryId: Joi.object({
-    id: Joi.number().required().description('Country ID'),
+export const createCountryValidation = {
+  payload: Joi.object({
+    name: Joi.string().required(),
+    cca3: Joi.string().length(3).required(),
+    capital: Joi.array().items(Joi.string()),
+    region: Joi.string(),
+    subregion: Joi.string(),
+    population: Joi.number().integer().min(0),
+    flagSvg: Joi.string().uri(),
+    flagPng: Joi.string().uri(),
+    languages: Joi.array().items(
+      Joi.object({
+        code: Joi.string().required(),
+        name: Joi.string().required(),
+      }),
+    ),
+    currencies: Joi.array().items(
+      Joi.object({
+        code: Joi.string().required(),
+        name: Joi.string().required(),
+        symbol: Joi.string(),
+      }),
+    ),
   }),
+};
 
-  // Path parameter validation for country code
-  countryCode: Joi.object({
-    code: Joi.string()
-      .length(3)
-      .required()
-      .description('3-letter country code (cca3)'),
+export const deleteCountryValidation = {
+  params: Joi.object({
+    id: Joi.number().integer().required(),
   }),
+};
 
-  // Payload validation for creating a country
-  createCountry: Joi.object({
-    name: Joi.string().required().description('Country name'),
-    cca3: Joi.string()
-      .length(3)
-      .required()
-      .description('3-letter country code'),
-    capital: Joi.array()
-      .items(Joi.string())
-      .default([])
-      .description('Capital cities'),
-    region: Joi.string()
-      .allow('', null)
-      .optional()
-      .description('Geographic region'),
-    subregion: Joi.string()
-      .allow('', null)
-      .optional()
-      .description('Geographic subregion'),
-    population: Joi.number()
-      .integer()
-      .min(0)
-      .default(0)
-      .description('Population count'),
-    flagPng: Joi.string()
-      .uri()
-      .allow('', null)
-      .optional()
-      .description('URL to PNG flag'),
-    flagSvg: Joi.string()
-      .uri()
-      .allow('', null)
-      .optional()
-      .description('URL to SVG flag'),
-    data: Joi.object().optional().description('Additional country data'),
+export const getCountryByIdValidation = {
+  params: Joi.object({
+    id: Joi.number().integer().required(),
   }),
+};
 
-  // Payload validation for updating a country
-  updateCountry: Joi.object({
-    name: Joi.string().optional().description('Country name'),
-    capital: Joi.array()
-      .items(Joi.string())
-      .optional()
-      .description('Capital cities'),
-    region: Joi.string()
-      .allow('', null)
-      .optional()
-      .description('Geographic region'),
-    subregion: Joi.string()
-      .allow('', null)
-      .optional()
-      .description('Geographic subregion'),
-    population: Joi.number()
-      .integer()
-      .min(0)
-      .optional()
-      .description('Population count'),
-    flagPng: Joi.string()
-      .uri()
-      .allow('', null)
-      .optional()
-      .description('URL to PNG flag'),
-    flagSvg: Joi.string()
-      .uri()
-      .allow('', null)
-      .optional()
-      .description('URL to SVG flag'),
-    data: Joi.object().optional().description('Additional country data'),
+export const updateCountryValidation = {
+  params: Joi.object({
+    id: Joi.number().integer().required(),
+  }),
+  payload: Joi.object({
+    name: Joi.string().optional(),
+    cca3: Joi.string().length(2).optional(),
+    region: Joi.string().optional(),
+    flagSvg: Joi.string().uri().optional(),
+    flagPng: Joi.string().uri().optional(),
+    population: Joi.number().integer().optional(),
+    languages: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.string(),
+          Joi.object({
+            code: Joi.string().required(),
+            name: Joi.string().required(),
+          }),
+        ),
+      )
+      .optional(),
+    currencies: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.string(),
+          Joi.object({
+            code: Joi.string().required(),
+            name: Joi.string().required(),
+          }),
+        ),
+      )
+      .optional(),
   }),
 };

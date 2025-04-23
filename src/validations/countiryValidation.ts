@@ -1,86 +1,87 @@
 import Joi from 'joi';
 
+const id = Joi.number().integer().required();
+const name = Joi.string();
+const cca3 = Joi.string().length(3);
+const capital = Joi.array().items(Joi.string());
+const region = Joi.string();
+const subregion = Joi.string();
+const population = Joi.number().integer().min(0);
+const flagSvg = Joi.string().uri();
+const flagPng = Joi.string().uri();
+const languages = Joi.array().items(
+  Joi.alternatives().try(
+    Joi.string(),
+    Joi.object({
+      code: Joi.string().required(),
+      name: Joi.string().required(),
+    }),
+  ),
+);
+const currencies = Joi.array().items(
+  Joi.alternatives().try(
+    Joi.string(),
+    Joi.object({
+      code: Joi.string().required(),
+      name: Joi.string().required(),
+    }),
+  ),
+);
+
+const pageSize = Joi.number().integer().min(1).max(100).default(50).optional();
+const page = Joi.number().integer().min(0).default(0).optional();
 export const gettAllCountriesValidation = {
   query: Joi.object({
     field: Joi.string()
       .valid('code', 'name', 'region', 'languages', 'currencies')
       .optional(),
     value: Joi.string().optional(),
-    pageSize: Joi.number().integer().min(1).max(100).default(50).optional(),
-    page: Joi.number().integer().min(0).default(0).optional(),
+    pageSize,
+    page,
   }),
 };
 
 export const createCountryValidation = {
   payload: Joi.object({
-    name: Joi.string().required(),
-    cca3: Joi.string().length(3).required(),
-    capital: Joi.array().items(Joi.string()),
-    region: Joi.string(),
-    subregion: Joi.string(),
-    population: Joi.number().integer().min(0),
-    flagSvg: Joi.string().uri(),
-    flagPng: Joi.string().uri(),
-    languages: Joi.array().items(
-      Joi.object({
-        code: Joi.string().required(),
-        name: Joi.string().required(),
-      }),
-    ),
-    currencies: Joi.array().items(
-      Joi.object({
-        code: Joi.string().required(),
-        name: Joi.string().required(),
-        symbol: Joi.string(),
-      }),
-    ),
+    name,
+    cca3: cca3.required(),
+    capital,
+    region,
+    subregion,
+    population,
+    flagSvg,
+    flagPng,
+    languages,
+    currencies,
   }),
 };
 
 export const deleteCountryValidation = {
   params: Joi.object({
-    id: Joi.number().integer().required(),
+    id,
   }),
 };
 
 export const getCountryByIdValidation = {
   params: Joi.object({
-    id: Joi.number().integer().required(),
+    id,
   }),
 };
 
 export const updateCountryValidation = {
   params: Joi.object({
-    id: Joi.number().integer().required(),
+    id,
   }),
   payload: Joi.object({
-    name: Joi.string().optional(),
-    cca3: Joi.string().length(3).optional(),
-    region: Joi.string().optional(),
-    flagSvg: Joi.string().uri().optional(),
-    flagPng: Joi.string().uri().optional(),
-    population: Joi.number().integer().min(0).optional(),
-    languages: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.string(),
-          Joi.object({
-            code: Joi.string().required(),
-            name: Joi.string().required(),
-          }),
-        ),
-      )
-      .optional(),
-    currencies: Joi.array()
-      .items(
-        Joi.alternatives().try(
-          Joi.string(),
-          Joi.object({
-            code: Joi.string().required(),
-            name: Joi.string().required(),
-          }),
-        ),
-      )
-      .optional(),
+    name: name.optional(),
+    cca3: cca3.optional(),
+    capital: capital.optional(),
+    region: region.optional(),
+    subregion: subregion.optional(),
+    flagSvg: flagSvg.optional(),
+    flagPng: flagPng.optional(),
+    population: population.optional(),
+    languages: languages.optional(),
+    currencies: currencies.optional(),
   }),
 };

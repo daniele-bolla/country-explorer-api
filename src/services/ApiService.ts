@@ -26,7 +26,7 @@ const apiService: AxiosInstance = axios.create(axiosConfig);
 const errorHandler = (error: AxiosError) => {
   const isRespError = apiError(error);
   if (isRespError) {
-    console.error(error);
+    console.error('API SERVICE ERROR', error);
   }
   return Promise.reject({ ...error });
 };

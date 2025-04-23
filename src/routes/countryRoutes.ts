@@ -47,7 +47,7 @@ export default {
       },
       {
         method: 'PUT',
-        path: '/countries/{id}',
+        path: '/api/countries/{id}',
         handler: updateCountryHandler,
         options: {
           validate: {

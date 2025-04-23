@@ -21,66 +21,63 @@ describe('Country Routes', () => {
     await clearDatabase();
   });
 
-  // describe('POST /api/countries', () => {
-  //   it('should create a new country with valid input', async () => {
-  //     const response = await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: validCountryInput,
-  //     });
+  describe('POST /api/countries', () => {
+    it('should create a new country with valid input', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: validCountryInput,
+      });
 
-  //     expect(response.statusCode).toBe(201);
-  //     const responseJson = JSON.parse(response.payload);
-  //     expect(responseJson.name).toBe(validCountryInput.name);
-  //     expect(responseJson.cca3).toBe(validCountryInput.cca3);
-  //     expect(responseJson).toHaveProperty('id');
-  //     expect(responseJson).toHaveProperty('createdAt');
-  //     expect(responseJson).toHaveProperty('updatedAt');
-  //     expect(responseJson.region).toBe(validCountryInput.region);
-  //     expect(responseJson.subregion).toBe(validCountryInput.subregion);
-  //     expect(responseJson.languages).toHaveLength(1);
-  //     expect(responseJson.currencies).toHaveLength(1);
-  //   });
+      expect(response.statusCode).toBe(201);
+      const responseJson = JSON.parse(response.payload);
+      expect(responseJson.name).toBe(validCountryInput.name);
+      expect(responseJson.cca3).toBe(validCountryInput.cca3);
+      expect(responseJson).toHaveProperty('id');
+      expect(responseJson).toHaveProperty('createdAt');
+      expect(responseJson).toHaveProperty('updatedAt');
+      expect(responseJson.region).toBe(validCountryInput.region);
+      expect(responseJson.subregion).toBe(validCountryInput.subregion);
+      expect(responseJson.languages).toHaveLength(1);
+      expect(responseJson.currencies).toHaveLength(1);
+    });
 
-  //   it('should return 400 with invalid input', async () => {
-  //     const response = await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: invalidCountryInput,
-  //     });
+    it('should return 400 with invalid input', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: invalidCountryInput,
+      });
 
-  //     expect(response.statusCode).toBe(400);
-  //     const responseJson = JSON.parse(response.payload);
-  //     expect(responseJson).toHaveProperty('error');
-  //     expect(responseJson).toHaveProperty('message');
-  //   });
+      expect(response.statusCode).toBe(400);
+      const responseJson = JSON.parse(response.payload);
+      expect(responseJson).toHaveProperty('error');
+      expect(responseJson).toHaveProperty('message');
+    });
 
-  //   it('should prevent creating duplicate countries with the same cca3', async () => {
-  //     // First creation should succeed
-  //     await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: validCountryInput,
-  //     });
+    it('should prevent creating duplicate countries with the same cca3', async () => {
+      await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: validCountryInput,
+      });
 
-  //     // Second creation with same cca3 should fail
-  //     const response = await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: validCountryInput,
-  //     });
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: validCountryInput,
+      });
 
-  //     expect(response.statusCode).toBe(409);
-  //     const responseJson = JSON.parse(response.payload);
-  //     expect(responseJson.message).toContain('already exists');
-  //   });
-  // });
+      expect(response.statusCode).toBe(409);
+      const responseJson = JSON.parse(response.payload);
+      expect(responseJson.message).toContain('already exists');
+    });
+  });
 
   describe('GET /api/countries/{id}', () => {
     let countryId: number;
 
     beforeEach(async () => {
-      // Create a test country to retrieve
       const response = await server.inject({
         method: 'POST',
         url: '/api/countries',
@@ -106,18 +103,18 @@ describe('Country Routes', () => {
       expect(country.cca3).toBe(validCountryInput.cca3);
     });
 
-    // it('should return 404 for non-existent country ID', async () => {
-    //   const nonExistentId = 9999;
-    //   const response = await server.inject({
-    //     method: 'GET',
-    //     url: `/api/countries/${nonExistentId}`,
-    //   });
+    it('should return 404 for non-existent country ID', async () => {
+      const nonExistentId = 9999;
+      const response = await server.inject({
+        method: 'GET',
+        url: `/api/countries/${nonExistentId}`,
+      });
 
-    //   expect(response.statusCode).toBe(404);
-    //   const error = JSON.parse(response.payload);
-    //   expect(error).toHaveProperty('error');
-    //   expect(error.message).toContain('not found');
-    // });
+      expect(response.statusCode).toBe(404);
+      const error = JSON.parse(response.payload);
+      expect(error).toHaveProperty('error');
+      expect(error.message).toContain('not found');
+    });
 
     it('should return 400 for invalid country ID format', async () => {
       const response = await server.inject({
@@ -131,107 +128,102 @@ describe('Country Routes', () => {
     });
   });
 
-  // describe('PUT /api/countries/{id}', () => {
-  //   let countryId: number;
+  describe('PUT /api/countries/{id}', () => {
+    let countryId: number;
 
-  //   beforeEach(async () => {
-  //     // Create a test country to update
-  //     const response = await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: validCountryInput,
-  //     });
+    beforeEach(async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: validCountryInput,
+      });
 
-  //     const country = JSON.parse(response.payload);
-  //     countryId = country.id;
-  //   });
+      const country = JSON.parse(response.payload);
+      countryId = country.id;
+    });
 
-  //   it('should update a country with valid input', async () => {
-  //     const response = await server.inject({
-  //       method: 'PUT',
-  //       url: `/api/countries/${countryId}`,
-  //       payload: {
-  //         name: 'Updated Name',
-  //         population: 5000000,
-  //         region: 'New Region',
-  //       },
-  //     });
+    it('should update a country with valid input', async () => {
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/api/countries/${countryId}`,
+        payload: {
+          name: 'Updated Name',
+          population: 5000000,
+          region: 'New Region',
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const { data: updated } = JSON.parse(response.payload);
+      expect(updated.id).toBe(countryId);
+      expect(updated.name).toBe('Updated Name');
+      expect(updated.population).toBe(5000000);
+      expect(updated.region).toBe('New Region');
 
-  //     expect(response.statusCode).toBe(200);
-  //     const updated = JSON.parse(response.payload);
-  //     expect(updated.id).toBe(countryId);
-  //     expect(updated.name).toBe('Updated Name');
-  //     expect(updated.population).toBe(5000000);
-  //     expect(updated.region).toBe('New Region');
+      // Fields not included in the update should remain unchanged
+      expect(updated.cca3).toBe(validCountryInput.cca3);
+    });
 
-  //     // Fields not included in the update should remain unchanged
-  //     expect(updated.cca3).toBe(validCountryInput.cca3);
-  //   });
+    it('should return 404 when updating non-existent country', async () => {
+      const nonExistentId = 9999;
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/api/countries/${nonExistentId}`,
+        payload: {
+          name: 'This Should Fail',
+        },
+      });
 
-  //   it('should return 404 when updating non-existent country', async () => {
-  //     const nonExistentId = 9999;
-  //     const response = await server.inject({
-  //       method: 'PUT',
-  //       url: `/api/countries/${nonExistentId}`,
-  //       payload: {
-  //         name: 'This Should Fail',
-  //       },
-  //     });
+      expect(response.statusCode).toBe(404);
+      const error = JSON.parse(response.payload);
+      expect(error).toHaveProperty('error');
+      expect(error.message).toContain('not found');
+    });
 
-  //     expect(response.statusCode).toBe(404);
-  //     const error = JSON.parse(response.payload);
-  //     expect(error).toHaveProperty('error');
-  //     expect(error.message).toContain('not exist');
-  //   });
+    it('should return 400 when updating with invalid data', async () => {
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/api/countries/${countryId}`,
+        payload: {
+          population: -100, // Invalid negative population
+        },
+      });
 
-  //   it('should return 400 when updating with invalid data', async () => {
-  //     const response = await server.inject({
-  //       method: 'PUT',
-  //       url: `/api/countries/${countryId}`,
-  //       payload: {
-  //         population: -100, // Invalid negative population
-  //       },
-  //     });
+      expect(response.statusCode).toBe(400);
+      const error = JSON.parse(response.payload);
+      expect(error).toHaveProperty('error');
+    });
 
-  //     expect(response.statusCode).toBe(400);
-  //     const error = JSON.parse(response.payload);
-  //     expect(error).toHaveProperty('error');
-  //   });
+    it('should prevent conflicting cca3 codes during update', async () => {
+      const anotherCountry = {
+        ...validCountryInput,
+        name: 'Another Country',
+        cca3: 'ANO',
+      };
 
-  //   it('should prevent conflicting cca3 codes during update', async () => {
-  //     // Create another country first
-  //     const anotherCountry = {
-  //       ...validCountryInput,
-  //       name: 'Another Country',
-  //       cca3: 'ANO',
-  //     };
+      await server.inject({
+        method: 'POST',
+        url: '/api/countries',
+        payload: anotherCountry,
+      });
 
-  //     await server.inject({
-  //       method: 'POST',
-  //       url: '/api/countries',
-  //       payload: anotherCountry,
-  //     });
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/api/countries/${countryId}`,
+        payload: {
+          cca3: 'ANO',
+        },
+      });
 
-  //     // Now try to update the first country to use the second's cca3
-  //     const response = await server.inject({
-  //       method: 'PUT',
-  //       url: `/api/countries/${countryId}`,
-  //       payload: {
-  //         cca3: 'ANO',
-  //       },
-  //     });
-
-  //     expect(response.statusCode).toBe(400);
-  //     const error = JSON.parse(response.payload);
-  //     expect(error.message).toContain('already exists');
-  //   });
-  // });
+      expect(response.statusCode).toBe(409);
+      const error = JSON.parse(response.payload);
+      expect(error.message).toContain('already exists');
+    });
+  });
 
   describe('DELETE /api/countries/{id}', () => {
     let countryId: number;
 
     beforeEach(async () => {
-      // Create a test country to delete
       const response = await server.inject({
         method: 'POST',
         url: '/api/countries',
@@ -252,7 +244,6 @@ describe('Country Routes', () => {
       const result = JSON.parse(response.payload);
       expect(result.data.country.id).toBe(countryId);
 
-      // Verify the country is gone
       const getResponse = await server.inject({
         method: 'GET',
         url: `/api/countries/${countryId}`,
@@ -261,7 +252,7 @@ describe('Country Routes', () => {
       expect(getResponse.statusCode).toBe(404);
     });
 
-    it('should return error when deleting non-existent country', async () => {
+    it('should return 404 when deleting non-existent country', async () => {
       const nonExistentId = 9999;
       const response = await server.inject({
         method: 'DELETE',
@@ -269,29 +260,23 @@ describe('Country Routes', () => {
       });
 
       expect(response.statusCode).toBe(404);
-      const error = JSON.parse(response.payload);
-      expect(error).toHaveProperty('error');
+      const payload = JSON.parse(response.payload);
+      expect(payload).toHaveProperty('error');
     });
 
-    // it('should clean up orphaned entities after deletion', async () => {
-    //   // This test requires direct DB access to verify cleanup
-    //   // We'll verify via the response
-    //   const response = await server.inject({
-    //     method: 'DELETE',
-    //     url: `/api/countries/${countryId}`,
-    //   });
+    it('should clean up orphaned entities after deletion', async () => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/api/countries/${countryId}`,
+      });
 
-    //   expect(response.statusCode).toBe(200);
-    //   const result = JSON.parse(response.payload);
+      expect(response.statusCode).toBe(200);
+      const { data } = JSON.parse(response.payload);
 
-    //   // Check that we have cleanup data in the response
-    //   expect(result).toHaveProperty('cleanup');
-    //   expect(result.cleanup).toHaveProperty('regions');
-    //   expect(result.cleanup).toHaveProperty('subregions');
-
-    //   // Verify relationships were counted correctly
-    //   expect(result.relationships.languages).toBe(1);
-    //   expect(result.relationships.currencies).toBe(1);
-    // });
+      // Need to check directly if thos regions and suregions still exist
+      expect(data).toHaveProperty('cleanup');
+      expect(data.cleanup).toHaveProperty('regions');
+      expect(data.cleanup).toHaveProperty('subregions');
+    });
   });
 });

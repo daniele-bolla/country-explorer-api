@@ -378,8 +378,8 @@ async function updateCountryEntity(
 }
 
 export async function updateCountry(
-  countryId: number,
   data: UpdateCountryInput,
+  countryId: number,
 ): Promise<any> {
   return await db.transaction(async (tx) => {
     // First check if country exists

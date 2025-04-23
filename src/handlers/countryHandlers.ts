@@ -47,7 +47,7 @@ export async function updateCountryHandler(
   const { id } = request.params;
   const countryData = request.payload as UpdateCountryInput;
   try {
-    const updatedCountry = await updateCountry(Number(id), countryData);
+    const updatedCountry = await updateCountry(countryData, Number(id));
     return h
       .response({
         message: 'Country updated successfully',

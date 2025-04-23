@@ -55,11 +55,11 @@ export const updateCountryValidation = {
   }),
   payload: Joi.object({
     name: Joi.string().optional(),
-    cca3: Joi.string().length(2).optional(),
+    cca3: Joi.string().length(3).optional(),
     region: Joi.string().optional(),
     flagSvg: Joi.string().uri().optional(),
     flagPng: Joi.string().uri().optional(),
-    population: Joi.number().integer().optional(),
+    population: Joi.number().integer().min(0).optional(),
     languages: Joi.array()
       .items(
         Joi.alternatives().try(

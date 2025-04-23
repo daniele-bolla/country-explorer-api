@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, notInArray, sql, Table } from 'drizzle-orm';
 import { DB, db, Transaction } from '../db/index';
 
 import {
@@ -37,8 +37,8 @@ import { PaginatedResult, PaginationOptions } from '../types/pagination';
 
 function formattedCountryResponse(
   country: Country,
-  region: RegionInput | null,
-  subregion: Omit<SubregionInput, 'regionId'> | null,
+  region: Partial<Region> | null,
+  subregion: Partial<SubregionInput> | null,
   languages: Language[],
   currencies: Currency[],
 ): CountryResponse {
@@ -116,7 +116,7 @@ export async function getCountryById(
         .limit(1);
 
       if (!countryWithRelations) {
-        throw new Error('not found');
+        throw new Error(`Country with ID ${id} not found`);
       }
 
       const { country, region, subregion } = countryWithRelations;
@@ -135,7 +135,7 @@ export async function getCountryById(
       );
     });
   } catch (error) {
-    console.error(`Error fetching country ID ${id}:`, error);
+    console.error(`Error getting with ID ${id}:`, error);
     throw error;
   }
 }
@@ -164,7 +164,7 @@ export async function createCountry(
     }
 
     let regionId: number | null = null;
-    let regionData: Region | undefined;
+    let regionData: Region | null = null;
 
     if (data.region) {
       regionData = await findOrCreateRegion(tx, data.region);
@@ -172,7 +172,7 @@ export async function createCountry(
     }
 
     let subregionId: number | null = null;
-    let subregionData: Subregion | undefined;
+    let subregionData: Subregion | null = null;
 
     if (data.subregion && regionId) {
       subregionData = await findOrCreateSubregion(tx, data.subregion, regionId);
@@ -202,14 +202,13 @@ export async function createCountry(
 
       await createCurrencyRelations(tx, country.id, currencies);
     }
-
-    return {
-      ...country,
-      region: regionData?.name,
-      subregion: subregionData?.name,
-      languages: languages,
-      currencies: currencies,
-    };
+    return formattedCountryResponse(
+      country,
+      regionData,
+      subregionData,
+      languages,
+      currencies,
+    );
   });
 }
 interface DeleteResult {

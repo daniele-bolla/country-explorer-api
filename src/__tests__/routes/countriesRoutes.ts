@@ -154,6 +154,7 @@ describe('Country Routes', () => {
       });
       expect(response.statusCode).toBe(200);
       const { data: updated } = JSON.parse(response.payload);
+      console.log(updated);
       expect(updated.id).toBe(countryId);
       expect(updated.name).toBe('Updated Name');
       expect(updated.population).toBe(5000000);

@@ -7,7 +7,7 @@ import {
   getAllCountriesHandler,
   getCountryHandler,
   updateCountryHandler,
-} from '../handlers/countryHandlers';
+} from '../handlers/countriesHandlers';
 import {
   createCountryValidation,
   deleteCountryValidation,

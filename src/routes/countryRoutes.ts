@@ -1,6 +1,4 @@
 import Hapi from '@hapi/hapi';
-import Boom from '@hapi/boom';
-import Joi from 'joi';
 import { ServerRoute } from '@hapi/hapi';
 
 import {
@@ -9,33 +7,15 @@ import {
   getAllCountriesHandler,
   getCountryHandler,
   updateCountryHandler,
-} from '../handlers/countryHandlers.js';
+} from '../handlers/countryHandlers';
 import {
   createCountryValidation,
   deleteCountryValidation,
   getCountryByIdValidation,
   gettAllCountriesValidation,
-} from '../validations/countiryValidation.js';
-
-const errorValidationHandler = {
-  options: {
-    stripUnknown: true,
-    abortEarly: false,
-  },
-  failAction: (request: any, h: any, err: any) => {
-    const error = Boom.badRequest('Invalid request query parameters');
-    error.output.payload.validation = {
-      source: 'query',
-      errors: err.details.map((detail: any) => ({
-        message: detail.message,
-        path: detail.path,
-        type: detail.type,
-        context: detail.context,
-      })),
-    };
-    throw error;
-  },
-};
+  updateCountryValidation,
+} from '../validations/countiryValidation';
+import { errorValidationHandler } from '../handlers/errorValidationHandler';
 
 export default {
   name: 'countries',
@@ -56,13 +36,14 @@ export default {
       {
         method: 'POST',
         path: '/api/countries',
+        handler: createCountryHandler,
         options: {
           validate: {
             ...createCountryValidation,
             ...errorValidationHandler,
           },
+          description: 'Create a countries',
         },
-        handler: createCountryHandler,
       },
       {
         method: 'PUT',
@@ -70,38 +51,8 @@ export default {
         handler: updateCountryHandler,
         options: {
           validate: {
-            params: Joi.object({
-              id: Joi.number().integer().required(),
-            }),
-            payload: Joi.object({
-              name: Joi.string().optional(),
-              cca3: Joi.string().length(2).optional(),
-              region: Joi.string().optional(),
-              flag: Joi.string().optional(),
-              population: Joi.number().integer().optional(),
-              languages: Joi.array()
-                .items(
-                  Joi.alternatives().try(
-                    Joi.string(),
-                    Joi.object({
-                      code: Joi.string().required(),
-                      name: Joi.string().required(),
-                    }),
-                  ),
-                )
-                .optional(),
-              currencies: Joi.array()
-                .items(
-                  Joi.alternatives().try(
-                    Joi.string(),
-                    Joi.object({
-                      code: Joi.string().required(),
-                      name: Joi.string().required(),
-                    }),
-                  ),
-                )
-                .optional(),
-            }),
+            ...updateCountryValidation,
+            ...errorValidationHandler,
           },
           description: 'Update a country',
         },

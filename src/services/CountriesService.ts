@@ -1,5 +1,5 @@
 import { and, count, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
-import { DB, db, Transaction } from '../db/index.js';
+import { DB, db, Transaction } from '../db/index';
 
 import {
   countriesTable,
@@ -12,12 +12,17 @@ import {
   regionsTable,
   Subregion,
   subregionsTable,
-} from '../db/schema.js';
-import { CountryInput, CountryResponse } from '../types/countryModel.js';
-import { findOrCreateRegion } from './RegionsService.js';
-import { findOrCreateLanguage } from './LanguagesService.js';
-import { findOrCreateSubregion } from './SubRegionsService.js';
-import { findOrCreateCurrency } from './CurrenciesService.js';
+} from '../db/schema';
+import {
+  CountryInput,
+  CountryResponse,
+  RegionInput,
+  SubregionInput,
+} from '../types/countryModel';
+import { findOrCreateRegion } from './RegionsService';
+import { findOrCreateLanguage } from './LanguagesService';
+import { findOrCreateSubregion } from './SubRegionsService';
+import { findOrCreateCurrency } from './CurrenciesService';
 import {
   createCurrencyRelations,
   createLanguageRelations,
@@ -27,8 +32,24 @@ import {
   updateCountryLanguages,
   updateCountryRegion,
   updateCountrySubregion,
-} from './CountriesRelationsService.js';
-import { PaginatedResult, PaginationOptions } from '../types/pagination.js';
+} from './CountriesRelationsService';
+import { PaginatedResult, PaginationOptions } from '../types/pagination';
+
+function formattedCountryResponse(
+  country: Country,
+  region: RegionInput | null,
+  subregion: Omit<SubregionInput, 'regionId'> | null,
+  languages: Language[],
+  currencies: Currency[],
+): CountryResponse {
+  return {
+    ...country,
+    region: region?.name,
+    subregion: subregion?.name,
+    languages,
+    currencies,
+  };
+}
 
 export const getCountries = async ({
   pageSize = 25,
@@ -95,7 +116,7 @@ export async function getCountryById(
         .limit(1);
 
       if (!countryWithRelations) {
-        return null;
+        throw new Error('not found');
       }
 
       const { country, region, subregion } = countryWithRelations;
@@ -105,13 +126,13 @@ export async function getCountryById(
         getCountryCurrencies(tx, id),
       ]);
 
-      return {
-        ...country,
-        region: region?.name,
-        subregion: subregion?.name,
+      return formattedCountryResponse(
+        country,
+        region,
+        subregion,
         languages,
         currencies,
-      };
+      );
     });
   } catch (error) {
     console.error(`Error fetching country ID ${id}:`, error);
@@ -239,10 +260,7 @@ export async function deleteCountry(id: number): Promise<DeleteResult> {
         .limit(1);
 
       if (!country) {
-        return {
-          success: false,
-          relationships: { languages: 0, currencies: 0 },
-        };
+        throw new Error('not found');
       }
 
       await tx.delete(countriesTable).where(eq(countriesTable.id, id));
@@ -372,7 +390,7 @@ export async function updateCountry(
       .limit(1);
 
     if (!existingCountry) {
-      throw new Error(`Country with ID ${countryId} does not exist`);
+      throw new Error(`Country with ID ${countryId} not found`);
     }
 
     // If cca3 is being updated, check it's not already in use by another country

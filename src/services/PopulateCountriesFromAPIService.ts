@@ -12,8 +12,23 @@ import {
   bulkCreateLanguageRelations,
 } from './CountriesRelationsService';
 
-export async function importCountries() {
+export async function importCountriesFromApi() {
+  const stats = {
+    startTime: Date.now(),
+    counts: {
+      countries: 0,
+      regions: 0,
+      subregions: 0,
+      languages: 0,
+      currencies: 0,
+      relations: 0,
+    },
+  };
+
+  console.log('🚀 Starting country import from API...');
+
   const countries = await fetchCountriesFromApi();
+  console.log(`📥 Fetched ${countries.length} countries from API`);
 
   const adaptedCountries = countries.map(adapterApiToCountryInput);
 
@@ -22,11 +37,13 @@ export async function importCountries() {
       languages.map(({ code, name }) => [code, { code, name }]),
     ),
   );
+
   const currenciesInputsMap = new Map(
     adaptedCountries.flatMap(({ currencies }) =>
       currencies.map(({ code, name }) => [code, { code, name }]),
     ),
   );
+
   const regionsMap = adaptedCountries.reduce((map, { region, subregion }) => {
     if (!map.has(region)) {
       map.set(region, new Set());
@@ -41,19 +58,23 @@ export async function importCountries() {
     region,
     subregions: Array.from(subregionsSet),
   }));
+  stats.counts.regions = regionsArray.length;
+  stats.counts.subregions = regionsArray.reduce(
+    (count, { subregions }) => count + subregions.length,
+    0,
+  );
 
   await clearDatabase();
+  console.log('🧹 Database cleared');
 
   const regionIds = new Map<string, number>();
   try {
     await db.transaction(async (tx) => {
-      /**
-       * Bulk create subregion for each region
-       */
+      // Process regions and subregions
+      console.log('⏳ Processing regions and subregions...');
       const regionPromises = regionsArray.map(
         async ({ region, subregions }) => {
           const { id: regionId } = await findOrCreateRegion(tx, region);
-
           regionIds.set(region, regionId);
 
           const subregionsWithId = subregions.map((name) => ({
@@ -71,23 +92,24 @@ export async function importCountries() {
       );
 
       const allInsertedSubregion = await Promise.all(regionPromises);
+      stats.counts.regions = allInsertedSubregion.length;
 
       const subregionIds = new Map(
         allInsertedSubregion.flat().map(({ name, id }) => [name, id]),
       );
+      stats.counts.regions = subregionIds.size;
 
-      /**
-       * Bulk insert languages
-       */
+      // Insert languages
+      console.log('⏳ Inserting languages...');
       const languagesInputs = Array.from(languagesInputsMap.values());
       const insertedLanguages = await bulkCreateLanguages(tx, languagesInputs);
       const languagesIds = new Map(
         insertedLanguages.map(({ code, id }) => [code, id]),
       );
 
-      /**
-       * Bulk insert currencies
-       */
+      stats.counts.languages = languagesIds.size;
+      // Insert currencies
+      console.log('⏳ Inserting currencies...');
       const currenciesInputs = Array.from(currenciesInputsMap.values());
       const insertedcurrencies = await bulkCreateCurrencies(
         tx,
@@ -96,10 +118,10 @@ export async function importCountries() {
       const currenciesIds = new Map(
         insertedcurrencies.map(({ code, id }) => [code, id]),
       );
+      stats.counts.currencies = currenciesIds.size;
 
-      /**
-       * Bulk insert countries
-       */
+      // Insert countries
+      console.log('⏳ Inserting countries...');
       const countriesInputs = adaptedCountries.map(
         ({ region, subregion, ...rest }) => ({
           ...rest,
@@ -109,6 +131,7 @@ export async function importCountries() {
           subregionId: subregionIds.get(subregion),
         }),
       );
+
       const insertedCountries = await bulkCreateCountriesEntity(
         tx,
         countriesInputs,
@@ -116,26 +139,42 @@ export async function importCountries() {
       const countriesIds = new Map(
         insertedCountries.map(({ cca3, id }) => [cca3, id]),
       );
+      stats.counts.currencies = countriesIds.size;
 
-      /**
-       * Bulk country-relations
-       */
+      // Create relationships
+      console.log('⏳ Creating relationships...');
       const countryLanguagesInputs = countriesInputs.flatMap((country) =>
         country.languages.map((language) => ({
           countryId: countriesIds.get(country.cca3)!,
           languageId: languagesIds.get(language.code)!,
         })),
       );
+
       const countryCurrenciesInputs = countriesInputs.flatMap((country) =>
         country.currencies.map((currency) => ({
           countryId: countriesIds.get(country.cca3)!,
           currencyId: currenciesIds.get(currency.code)!,
         })),
       );
+
       await bulkCreateLanguageRelations(tx, countryLanguagesInputs);
       await bulkCreateCurrencyRelations(tx, countryCurrenciesInputs);
+
+      stats.counts.relations =
+        countryLanguagesInputs.length + countryCurrenciesInputs.length;
     });
+
+    // Print simple summary
+    const duration = ((Date.now() - stats.startTime) / 1000).toFixed(2);
+    console.log('✅ Import completed successfully!');
+    console.log(
+      `⏱️ Time: ${duration}s | 🌎 Countries: ${stats.counts.countries} | 🔤 Languages: ${stats.counts.languages} | 💰 Currencies: ${stats.counts.currencies} | 🔗 Relations: ${stats.counts.relations}`,
+    );
+
+    return { success: true, stats };
   } catch (error) {
-    console.error(error);
+    const duration = ((Date.now() - stats.startTime) / 1000).toFixed(2);
+    console.error(`❌ Import failed after ${duration}s:`, error);
+    return { success: false, error };
   }
 }

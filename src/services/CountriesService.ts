@@ -1,11 +1,9 @@
-import { and, count, eq, isNotNull, notInArray, sql, Table } from 'drizzle-orm';
+import { and, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
 import { DB, db, Transaction } from '../db/index';
 
 import {
   countriesTable,
   Country,
-  countryCurrenciesTable,
-  countryLanguagesTable,
   Currency,
   Language,
   Region,
@@ -14,9 +12,9 @@ import {
   subregionsTable,
 } from '../db/schema';
 import {
+  CountryEntity,
   CountryInput,
   CountryResponse,
-  RegionInput,
   SubregionInput,
 } from '../types/countryModel';
 import { findOrCreateRegion } from './RegionsService';
@@ -26,6 +24,8 @@ import { findOrCreateCurrency } from './CurrenciesService';
 import {
   createCurrencyRelations,
   createLanguageRelations,
+  createRegionRelation,
+  createSubregionRelation,
   getCountryCurrencies,
   getCountryLanguages,
   updateCountryCurrencies,
@@ -51,15 +51,248 @@ function formattedCountryResponse(
   };
 }
 
+async function selectCountryById(
+  q: Transaction | DB,
+  countryId: Country['id'],
+): Promise<CountryEntity | undefined> {
+  const countryResult = await q.query.countriesTable.findFirst({
+    where: eq(countriesTable.id, countryId),
+    with: {
+      region: true,
+      subregion: true,
+      languages: {
+        with: {
+          language: true,
+        },
+      },
+      currencies: {
+        with: {
+          currency: true,
+        },
+      },
+    },
+  });
+
+  return countryResult;
+}
+
+export async function getCountriesWithFilters({
+  pageSize = 25,
+  page = 1,
+  filter = {},
+  sort = { field: 'name', direction: 'asc' },
+  includeRelations = false,
+}: CountryListOptions = {}): Promise<PaginatedResult<CountryResponse>> {
+  try {
+    // Step 1: Use SQL builder to get IDs that match filters
+    let filterQuery = db.select({ id: countriesTable.id }).from(countriesTable);
+
+    // Apply basic filters
+    if (filter.name) {
+      filterQuery = filterQuery.where(
+        ilike(countriesTable.name, `%${filter.name}%`),
+      );
+    }
+
+    if (filter.cca3) {
+      filterQuery = filterQuery.where(eq(countriesTable.cca3, filter.cca3));
+    }
+
+    if (filter.population?.min) {
+      filterQuery = filterQuery.where(
+        gte(countriesTable.population, filter.population.min),
+      );
+    }
+
+    if (filter.population?.max) {
+      filterQuery = filterQuery.where(
+        lte(countriesTable.population, filter.population.max),
+      );
+    }
+
+    // Apply advanced filters that need joins
+    if (filter.region) {
+      filterQuery = filterQuery
+        .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+        .where(ilike(regionsTable.name, `%${filter.region}%`));
+    }
+
+    if (filter.subregion) {
+      filterQuery = filterQuery
+        .leftJoin(
+          subregionsTable,
+          eq(countriesTable.subregionId, subregionsTable.id),
+        )
+        .where(ilike(subregionsTable.name, `%${filter.subregion}%`));
+    }
+
+    if (filter.language) {
+      filterQuery = filterQuery
+        .leftJoin(
+          countryLanguagesTable,
+          eq(countryLanguagesTable.countryId, countriesTable.id),
+        )
+        .leftJoin(
+          languagesTable,
+          eq(languagesTable.id, countryLanguagesTable.languageId),
+        )
+        .where(
+          or(
+            ilike(languagesTable.name, `%${filter.language}%`),
+            ilike(languagesTable.code, `%${filter.language}%`),
+          ),
+        );
+    }
+
+    if (filter.currency) {
+      filterQuery = filterQuery
+        .leftJoin(
+          countryCurrenciesTable,
+          eq(countryCurrenciesTable.countryId, countriesTable.id),
+        )
+        .leftJoin(
+          currenciesTable,
+          eq(currenciesTable.id, countryCurrenciesTable.currencyId),
+        )
+        .where(
+          or(
+            ilike(currenciesTable.name, `%${filter.currency}%`),
+            ilike(currenciesTable.code, `%${filter.currency}%`),
+          ),
+        );
+    }
+
+    // Get distinct country IDs matching our filters
+    const filteredIds = await filterQuery
+      .groupBy(countriesTable.id)
+      .orderBy(countriesTable.id);
+
+    // Step 2: Count total matching countries
+    const totalCount = filteredIds.length;
+
+    // Step 3: Apply pagination to IDs
+    const paginatedIds = filteredIds
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map((row) => row.id);
+
+    // Early return if no results
+    if (paginatedIds.length === 0) {
+      return {
+        data: [],
+        meta: {
+          total: totalCount,
+          page,
+          pageSize,
+          pageCount: Math.ceil(totalCount / pageSize),
+        },
+      };
+    }
+
+    // Step 4: Now use the query builder with findMany to get the full data with relations
+    let queryOptions: any = {
+      where: inArray(countriesTable.id, paginatedIds),
+    };
+
+    // Add relations if requested
+    if (includeRelations) {
+      queryOptions.with = {
+        region: true,
+        subregion: true,
+        languages: {
+          with: {
+            language: true,
+          },
+        },
+        currencies: {
+          with: {
+            currency: true,
+          },
+        },
+      };
+    }
+
+    // Apply sorting
+    const { field, direction } = sort;
+    if (field in countriesTable) {
+      queryOptions.orderBy = (columns: any) => [
+        direction === 'desc'
+          ? desc(columns[field as keyof typeof columns])
+          : asc(columns[field as keyof typeof columns]),
+      ];
+    }
+
+    // Execute the query
+    const countries = await db.query.countriesTable.findMany(queryOptions);
+
+    // Format the results
+    const formattedCountries = countries.map((country) => {
+      if (includeRelations) {
+        const languages = country.languages
+          ? country.languages.map((rel) => rel.language)
+          : [];
+
+        const currencies = country.currencies
+          ? country.currencies.map((rel) => rel.currency)
+          : [];
+
+        return formattedCountryResponse(
+          country,
+          country.region || null,
+          country.subregion || null,
+          languages,
+          currencies,
+        );
+      } else {
+        return {
+          ...country,
+          region: null,
+          subregion: null,
+          languages: [],
+          currencies: [],
+        };
+      }
+    });
+
+    // Return paginated result
+    return {
+      data: formattedCountries,
+      meta: {
+        total: totalCount,
+        page,
+        pageSize,
+        pageCount: Math.ceil(totalCount / pageSize),
+      },
+    };
+  } catch (error) {
+    console.error('Error getting countries with filters:', error);
+    throw error;
+  }
+}
 export const getCountries = async ({
   pageSize = 25,
   page = 1,
 }: PaginationOptions = {}): Promise<PaginatedResult<Country>> => {
-  const countries = await db
-    .select()
-    .from(countriesTable)
-    .limit(pageSize)
-    .offset((page - 1) * pageSize);
+  const countries = await db.query.countriesTable.findMany({
+    with: {
+      region: true,
+      subregion: true,
+      languages: {
+        with: {
+          language: true,
+        },
+      },
+      currencies: {
+        with: {
+          currency: true,
+        },
+      },
+    },
+  });
+  // const countries = await db
+  //   .select()
+  //   .from(countriesTable)
+  //   .limit(pageSize)
+  //   .offset((page - 1) * pageSize);
 
   const [{ count }] = await db
     .select({
@@ -77,67 +310,12 @@ export const getCountries = async ({
   };
 };
 
-export async function getCountryById(
-  id: number,
-): Promise<CountryResponse | null> {
-  try {
-    return await db.transaction(async (tx) => {
-      const [countryWithRelations] = await db
-        .select({
-          country: {
-            id: countriesTable.id,
-            name: countriesTable.name,
-            cca3: countriesTable.cca3,
-            capital: countriesTable.capital,
-            population: countriesTable.population,
-            flagSvg: countriesTable.flagSvg,
-            flagPng: countriesTable.flagPng,
-            createdAt: countriesTable.createdAt,
-            updatedAt: countriesTable.updatedAt,
-            regionId: countriesTable.regionId,
-            subregionId: countriesTable.subregionId,
-          },
-          region: {
-            id: regionsTable.id,
-            name: regionsTable.name,
-          },
-          subregion: {
-            id: subregionsTable.id,
-            name: subregionsTable.name,
-          },
-        })
-        .from(countriesTable)
-        .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
-        .leftJoin(
-          subregionsTable,
-          eq(countriesTable.subregionId, subregionsTable.id),
-        )
-        .where(eq(countriesTable.id, id))
-        .limit(1);
-
-      if (!countryWithRelations) {
-        throw new Error(`Country with ID ${id} not found`);
-      }
-
-      const { country, region, subregion } = countryWithRelations;
-
-      const [languages, currencies] = await Promise.all([
-        getCountryLanguages(tx, id),
-        getCountryCurrencies(tx, id),
-      ]);
-
-      return formattedCountryResponse(
-        country,
-        region,
-        subregion,
-        languages,
-        currencies,
-      );
-    });
-  } catch (error) {
-    console.error(`Error getting with ID ${id}:`, error);
-    throw error;
+export async function getCountryById(countryId: Country['id']): Promise<any> {
+  const country = await selectCountryById(db, countryId);
+  if (!country) {
+    throw new Error(`Country with ID ${countryId} not found`);
   }
+  return country;
 }
 
 async function createCountryEntity(
@@ -145,7 +323,6 @@ async function createCountryEntity(
   data: CountryInput,
 ): Promise<Country> {
   const [country] = await q.insert(countriesTable).values(data).returning();
-
   return country;
 }
 
@@ -153,33 +330,29 @@ export async function createCountry(
   data: CountryInput,
 ): Promise<CountryResponse> {
   return await db.transaction(async (tx) => {
-    const [existingCountry] = await tx
-      .select()
-      .from(countriesTable)
-      .where(eq(countriesTable.cca3, data.cca3))
-      .limit(1);
+    const existingCountry = await tx.query.countriesTable.findFirst({
+      where: eq(countriesTable.cca3, data.cca3),
+    });
 
     if (existingCountry) {
       throw new Error(`Country with code ${data.cca3} already exists`);
     }
 
-    let regionId: number | null = null;
-    let regionData: Region | null = null;
+    const country = await createCountryEntity(tx, data);
+
+    let region: Region | null = null;
 
     if (data.region) {
-      regionData = await findOrCreateRegion(tx, data.region);
-      regionId = regionData.id;
+      region = await findOrCreateRegion(tx, data.region);
+      await createRegionRelation(tx, country.id, region.id);
     }
 
-    let subregionId: number | null = null;
-    let subregionData: Subregion | null = null;
+    let subregion: Subregion | null = null;
 
-    if (data.subregion && regionId) {
-      subregionData = await findOrCreateSubregion(tx, data.subregion, regionId);
-      subregionId = subregionData.id;
+    if (data.subregion && region && region.id) {
+      subregion = await findOrCreateSubregion(tx, data.subregion, region.id);
+      await createSubregionRelation(tx, country.id, subregion.id);
     }
-
-    const country = await createCountryEntity(tx, data);
 
     const languages: Language[] = [];
 
@@ -204,8 +377,8 @@ export async function createCountry(
     }
     return formattedCountryResponse(
       country,
-      regionData,
-      subregionData,
+      region,
+      subregion,
       languages,
       currencies,
     );
@@ -216,117 +389,61 @@ interface DeleteResult {
     id: number;
     name: string;
   };
-  relationships: {
-    languages: number;
-    currencies: number;
+  cleanup: {
+    regions: number;
+    subregions: number;
   };
 }
-export async function deleteCountry(id: number): Promise<DeleteResult> {
-  try {
-    return await db.transaction(async (tx) => {
-      const [languageCount] = await tx
-        .select({ count: count() })
-        .from(countryLanguagesTable)
-        .where(eq(countryLanguagesTable.countryId, id));
+export async function deleteCountry(
+  countryId: Country['id'],
+): Promise<DeleteResult> {
+  return await db.transaction(async (tx) => {
+    const country = await selectCountryById(tx, countryId);
+    if (!country) {
+      throw new Error(`Country with ID ${countryId} not found`);
+    }
+    await tx.delete(countriesTable).where(eq(countriesTable.id, countryId));
 
-      const [currencyCount] = await tx
-        .select({ count: count() })
-        .from(countryCurrenciesTable)
-        .where(eq(countryCurrenciesTable.countryId, id));
+    const deletedSubregions = await tx
+      .delete(subregionsTable)
+      .where(
+        notInArray(
+          subregionsTable.id,
+          tx
+            .select({ id: countriesTable.subregionId })
+            .from(countriesTable)
+            .where(isNotNull(countriesTable.subregionId)),
+        ),
+      )
+      .returning();
 
-      const [country] = await tx
-        .select({
-          id: countriesTable.id,
-          name: countriesTable.name,
-          regionId: countriesTable.regionId,
-          subregionId: countriesTable.subregionId,
-          region: {
-            id: regionsTable.id,
-            name: regionsTable.name,
-          },
-          subregion: {
-            id: subregionsTable.id,
-            name: subregionsTable.name,
-          },
-        })
-        .from(countriesTable)
-        .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
-        .leftJoin(
-          subregionsTable,
-          eq(countriesTable.subregionId, subregionsTable.id),
-        )
-        .where(eq(countriesTable.id, id))
-        .limit(1);
-
-      if (!country) {
-        throw new Error('not found');
-      }
-
-      await tx.delete(countriesTable).where(eq(countriesTable.id, id));
-
-      const deletedSubregions = await tx
-        .delete(subregionsTable)
-        .where(
+    const deletedRegions = await tx
+      .delete(regionsTable)
+      .where(
+        and(
           notInArray(
-            subregionsTable.id,
+            regionsTable.id,
             tx
-              .select({ id: countriesTable.subregionId })
+              .select({ id: countriesTable.regionId })
               .from(countriesTable)
-              .where(isNotNull(countriesTable.subregionId)),
+              .where(isNotNull(countriesTable.regionId)),
           ),
-        )
-        .returning();
-
-      const deletedRegions = await tx
-        .delete(regionsTable)
-        .where(
-          and(
-            notInArray(
-              regionsTable.id,
-              tx
-                .select({ id: countriesTable.regionId })
-                .from(countriesTable)
-                .where(isNotNull(countriesTable.regionId)),
-            ),
-            notInArray(
-              regionsTable.id,
-              tx.select({ id: subregionsTable.regionId }).from(subregionsTable),
-            ),
+          notInArray(
+            regionsTable.id,
+            tx.select({ id: subregionsTable.regionId }).from(subregionsTable),
           ),
-        )
-        .returning();
+        ),
+      )
+      .returning();
 
-      return {
-        country: {
-          id: country.id,
-          name: country.name,
-          region: country.region?.name
-            ? {
-                id: country.region.id,
-                name: country.region.name,
-              }
-            : null,
-          subregion: country.subregion?.name
-            ? {
-                id: country.subregion.id,
-                name: country.subregion.name,
-              }
-            : null,
-        },
-        relationships: {
-          languages: languageCount?.count || 0,
-          currencies: currencyCount?.count || 0,
-        },
-        cleanup: {
-          regions: deletedRegions.length,
-          subregions: deletedSubregions.length,
-        },
-      };
-    });
-  } catch (error) {
-    console.error(`Error deleting country ID ${id}:`, error);
-    throw error;
-  }
+    return {
+      country,
+      cleanup: {
+        regions: deletedRegions.length,
+        subregions: deletedSubregions.length,
+      },
+    };
+  });
 }
 
 export interface UpdateCountryInput {
@@ -341,35 +458,15 @@ export interface UpdateCountryInput {
   languages?: Array<{ code: string; name: string }>;
   currencies?: Array<{ code: string; name: string }>;
 }
-// Update basic country fields
+
 async function updateCountryEntity(
   tx: Transaction | DB,
   countryId: number,
   data: Partial<Country>,
 ): Promise<Country> {
-  // Only include fields that are explicitly provided
-  const updateData: any = {};
-
-  if (data.name !== undefined) updateData.name = data.name;
-  if (data.cca3 !== undefined) updateData.cca3 = data.cca3;
-  if (data.capital !== undefined) updateData.capital = data.capital;
-  if (data.population !== undefined) updateData.population = data.population;
-  if (data.flagSvg !== undefined) updateData.flagSvg = data.flagSvg;
-  if (data.flagPng !== undefined) updateData.flagPng = data.flagPng;
-
-  if (Object.keys(updateData).length === 0) {
-    const [country] = await tx
-      .select()
-      .from(countriesTable)
-      .where(eq(countriesTable.id, countryId))
-      .limit(1);
-
-    return country;
-  }
-
   const [updatedCountry] = await tx
     .update(countriesTable)
-    .set(updateData)
+    .set(data)
     .where(eq(countriesTable.id, countryId))
     .returning();
 
@@ -379,103 +476,74 @@ async function updateCountryEntity(
 export async function updateCountry(
   data: UpdateCountryInput,
   countryId: number,
-): Promise<any> {
+): Promise<CountryResponse> {
   return await db.transaction(async (tx) => {
-    // First check if country exists
-    const [existingCountry] = await tx
-      .select()
-      .from(countriesTable)
-      .where(eq(countriesTable.id, countryId))
-      .limit(1);
+    const existingCountry = await tx.query.countriesTable.findFirst({
+      where: eq(countriesTable.id, countryId),
+    });
 
     if (!existingCountry) {
       throw new Error(`Country with ID ${countryId} not found`);
     }
 
-    // If cca3 is being updated, check it's not already in use by another country
     if (data.cca3 && data.cca3 !== existingCountry.cca3) {
-      const [conflictingCountry] = await tx
-        .select()
-        .from(countriesTable)
-        .where(eq(countriesTable.cca3, data.cca3))
-        .limit(1);
+      const conflictingCountry = await tx.query.countriesTable.findFirst({
+        where: eq(countriesTable.cca3, data.cca3),
+      });
 
       if (conflictingCountry && conflictingCountry.id !== countryId) {
         throw new Error(`Country with code ${data.cca3} already exists`);
       }
     }
 
-    // Initialize variables to track updates
-    let regionId = existingCountry.regionId;
-    let regionName: string | undefined;
-    let subregionId = existingCountry.subregionId;
-    let subregionName: string | undefined;
+    let region: Region | null = null;
+    let subregion: Region | null = null;
+
     let languages: Language[] = [];
     let currencies: Currency[] = [];
 
     // 1. Update basic fields
-    const updatedCountry = await updateCountryEntity(tx, countryId, {
-      name: data.name,
-      cca3: data.cca3,
-      capital: data.capital,
-      population: data.population,
-      flagSvg: data.flagSvg,
-      flagPng: data.flagPng,
-    });
+    const updatedCountry = await updateCountryEntity(tx, countryId, data);
 
-    // 2. Update region if provided
     if (data.region) {
-      const regionResult = await updateCountryRegion(
-        tx,
-        countryId,
-        data.region,
-      );
-      regionId = regionResult.regionId;
-      regionName = regionResult.regionName;
+      region = await updateCountryRegion(tx, countryId, data.region);
     } else if (existingCountry.regionId) {
-      // If not updating, but region exists, get the data
-      const [region] = await tx
+      const [selectedRegion] = await tx
         .select()
         .from(regionsTable)
         .where(eq(regionsTable.id, existingCountry.regionId))
         .limit(1);
 
-      if (region) {
-        regionName = region.name;
+      if (selectedRegion) {
+        region = selectedRegion;
       }
     }
 
-    // 3. Update subregion if provided and region exists
-    if (data.subregion && regionId) {
-      const subregionResult = await updateCountrySubregion(
+    if (data.subregion && region && region.id) {
+      subregion = await updateCountrySubregion(
         tx,
         countryId,
         data.subregion,
-        regionId,
+        region.id,
       );
-      subregionId = subregionResult.subregionId;
-      subregionName = subregionResult.subregionName;
     } else if (existingCountry.subregionId) {
-      const [subregion] = await tx
+      const [selectedSubregion] = await tx
         .select()
         .from(subregionsTable)
         .where(eq(subregionsTable.id, existingCountry.subregionId))
         .limit(1);
 
-      if (subregion) {
-        subregionName = subregion.name;
+      if (selectedSubregion) {
+        subregion = selectedSubregion;
       }
     }
 
-    // 4. Update languages if provided
     if (data.languages && data.languages.length > 0) {
       languages = await updateCountryLanguages(tx, countryId, data.languages);
     } else {
-      // If not updating languages, fetch existing ones
       languages = await getCountryLanguages(tx, countryId);
     }
 
-    // 5. Update currencies if provided
     if (data.currencies && data.currencies.length > 0) {
       currencies = await updateCountryCurrencies(
         tx,
@@ -483,16 +551,15 @@ export async function updateCountry(
         data.currencies,
       );
     } else {
-      // If not updating currencies, fetch existing ones
       currencies = await getCountryCurrencies(tx, countryId);
     }
 
-    return {
-      ...updatedCountry,
-      region: regionName,
-      subregion: subregionName,
+    return formattedCountryResponse(
+      updatedCountry,
+      region,
+      subregion,
       languages,
       currencies,
-    };
+    );
   });
 }

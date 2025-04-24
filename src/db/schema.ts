@@ -8,7 +8,6 @@ import {
   bigint,
   timestamp,
   primaryKey,
-  boolean,
 } from 'drizzle-orm/pg-core';
 
 export const regionsTable = pgTable('regions', {
@@ -20,7 +19,7 @@ export const regionsTable = pgTable('regions', {
 
 export const subregionsTable = pgTable('subregions', {
   id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
   regionId: integer('region_id')
     .notNull()
     .references(() => regionsTable.id, { onDelete: 'cascade' }),
@@ -80,7 +79,6 @@ export const countryLanguagesTable = pgTable(
     languageId: integer('language_id')
       .notNull()
       .references(() => languagesTable.id, { onDelete: 'cascade' }),
-    official: boolean('official').default(false),
   },
   (t) => [primaryKey({ columns: [t.countryId, t.languageId] })],
 );

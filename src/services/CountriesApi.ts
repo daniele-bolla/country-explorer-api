@@ -1,21 +1,24 @@
 import config from '../config';
-import { RestCountryFields } from '../types/countryModel';
+import { CountryApiResponse, RestCountryFields } from '../types/countryModel';
 import ApiService from './ApiService';
 
-export async function fetchCountriesFromApi() {
+export async function fetchCountriesFromApi(): Promise<CountryApiResponse[]> {
   const wtihFields: RestCountryFields[] = [
     'name',
     'cca3',
     'region',
+    'subregion',
     'capital',
     'flags',
     'population',
     'languages',
     'currencies',
   ];
-  const data = await ApiService.get(
-    `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
+  // const { data } = await ApiService.get(
+  //   `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
+  // );
+  const { data } = await ApiService.get(
+    `${config.api.countriesBaseUrl}/region/europe?fields=${wtihFields.join(',')}`,
   );
-  console.log(data);
   return data;
 }

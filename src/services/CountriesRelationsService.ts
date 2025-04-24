@@ -9,12 +9,39 @@ import {
   Currency,
   Language,
   languagesTable,
+  Region,
+  Subregion,
 } from '../db/schema';
 import { findOrCreateCurrency } from './CurrenciesService';
 import { findOrCreateRegion } from './RegionsService';
 import { findOrCreateSubregion } from './SubRegionsService';
 import { findOrCreateLanguage } from './LanguagesService';
 
+export async function createRegionRelation(
+  tx: Transaction,
+  countryId: number,
+  regionId: number,
+): Promise<void> {
+  await tx
+    .update(countriesTable)
+    .set({
+      regionId,
+    })
+    .where(eq(countriesTable.id, countryId));
+}
+
+export async function createSubregionRelation(
+  tx: Transaction,
+  countryId: number,
+  subregionId: number,
+): Promise<void> {
+  await tx
+    .update(countriesTable)
+    .set({
+      subregionId,
+    })
+    .where(eq(countriesTable.id, countryId));
+}
 export async function createLanguageRelations(
   q: Transaction | DB,
   countryId: number,
@@ -87,7 +114,7 @@ export async function updateCountryRegion(
   q: Transaction | DB,
   countryId: number,
   regionName: string,
-): Promise<{ regionId: number; regionName: string }> {
+): Promise<Region> {
   const region = await findOrCreateRegion(q, regionName);
 
   await q
@@ -95,9 +122,10 @@ export async function updateCountryRegion(
     .set({
       regionId: region.id,
     })
-    .where(eq(countriesTable.id, countryId));
+    .where(eq(countriesTable.id, countryId))
+    .returning();
 
-  return { regionId: region.id, regionName: region.name };
+  return region;
 }
 
 export async function updateCountrySubregion(
@@ -105,7 +133,7 @@ export async function updateCountrySubregion(
   countryId: number,
   subregionName: string,
   regionId: number,
-): Promise<{ subregionId: number; subregionName: string }> {
+): Promise<Subregion> {
   const subregion = await findOrCreateSubregion(q, subregionName, regionId);
 
   await q
@@ -113,9 +141,10 @@ export async function updateCountrySubregion(
     .set({
       subregionId: subregion.id,
     })
-    .where(eq(countriesTable.id, countryId));
+    .where(eq(countriesTable.id, countryId))
+    .returning();
 
-  return { subregionId: subregion.id, subregionName: subregion.name };
+  return subregion;
 }
 
 export async function updateCountryLanguages(
@@ -141,7 +170,6 @@ export async function updateCountryLanguages(
       })
       .onConflictDoNothing();
   }
-
   return languages;
 }
 

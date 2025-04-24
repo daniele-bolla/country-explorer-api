@@ -11,21 +11,27 @@ export interface CountryName {
   nativeName?: Record<string, CountryNameNative>;
 }
 
-export interface RestCountryResponse {
-  name: CountryName;
+export interface CountryApiResponse {
+  name: {
+    common: string;
+    official: string;
+  };
   cca3: string;
-  capital?: string[];
-  region?: string;
-  subregion?: string;
-  languages?: Record<string, LanguageInput>;
-  currencies?: Record<string, CurrencyInput>;
+  region: string;
+  subregion: string;
+  languages?: Record<string, string>;
+  currencies?: Record<string, {
+    name: string;
+    symbol?: string;
+  }>;
   population: number;
-  flags?: {
+  flags: {
     png: string;
     svg: string;
   };
+  capital?: string[];
 }
-export type RestCountryFields = keyof RestCountryResponse;
+export type RestCountryFields = keyof CountryApiResponse;
 export type LanguageInput = Omit<Language, 'id' | 'createdAt' | 'updatedAt'>;
 export type CurrencyInput = Omit<Currency, 'id' | 'createdAt' | 'updatedAt'>;
 export type RegionInput = Omit<Region, 'id' | 'createdAt' | 'updatedAt'>;
@@ -42,11 +48,14 @@ export interface CountryInput
   subregion: SubregionInput['name'];
 }
 
-export interface CountryEntity extends Country {
-  languages: Language[];
-  currencies: Currency[];
-  region?: Region;
-  subregion?: Subregion;
+
+export type CountryEntity =
+  | (Country & {
+      region: Region | null;
+      subregion: Subregion | null;
+      languages: Array<{ language: Language }>;
+      currencies: Array<{ currency: Currency }>;
+    })
 }
 
 export interface CountryResponse

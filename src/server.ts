@@ -7,7 +7,7 @@ import routes from './routes/index';
 import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
-import { importCountries } from './services/PopulateCountries';
+import { importCountries } from './services/PopulateCountriesFromAPIService';
 
 export const init = async (serverPort?: number) => {
   const server = Hapi.server({
@@ -19,6 +19,8 @@ export const init = async (serverPort?: number) => {
       },
     },
   });
+
+  await importCountries();
 
   // Register Swagger documentation
   //   const swaggerOptions = {

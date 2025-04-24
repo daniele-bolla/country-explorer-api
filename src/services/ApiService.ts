@@ -31,9 +31,8 @@ const errorHandler = (error: AxiosError) => {
   return Promise.reject({ ...error });
 };
 
-const successHandler = (response: AxiosResponse) => {
-  const { data } = response;
-  return data;
+const successHandler = (response: AxiosResponse<any>) => {
+  return response;
 };
 
 apiService.interceptors.response.use(

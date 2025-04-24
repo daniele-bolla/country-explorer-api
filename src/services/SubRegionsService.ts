@@ -1,6 +1,7 @@
 import { DB, Transaction } from '../db';
 import { Subregion, subregionsTable } from '../db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, Name } from 'drizzle-orm';
+import { SubregionInput } from '../types/countryModel';
 
 export async function findOrCreateSubregion(
   q: Transaction | DB,
@@ -27,9 +28,21 @@ export async function findOrCreateSubregion(
     .values({
       name: subregionName,
       regionId,
-      updatedAt: new Date(),
     })
     .returning();
 
   return newSubregion;
+}
+
+export async function bulkCreateSubregion(
+  q: Transaction | DB,
+  subregions: SubregionInput[],
+): Promise<Subregion[]> {
+  const newSubregions = await q
+    .insert(subregionsTable)
+    .values(subregions)
+    .onConflictDoNothing()
+    .returning();
+
+  return newSubregions;
 }

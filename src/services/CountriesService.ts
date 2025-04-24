@@ -76,198 +76,195 @@ async function selectCountryById(
   return countryResult;
 }
 
-export async function getCountriesWithFilters({
-  pageSize = 25,
-  page = 1,
-  filter = {},
-  sort = { field: 'name', direction: 'asc' },
-  includeRelations = false,
-}: CountryListOptions = {}): Promise<PaginatedResult<CountryResponse>> {
-  try {
-    // Step 1: Use SQL builder to get IDs that match filters
-    let filterQuery = db.select({ id: countriesTable.id }).from(countriesTable);
+// export async function getCountriesWithFilters({
+//   pageSize = 25,
+//   page = 1,
+//   filter = {},
+//   sort = { field: 'name', direction: 'asc' },
+//   includeRelations = false,
+// }: CountryListOptions = {}): Promise<PaginatedResult<CountryResponse>> {
+//   try {
+//     // Step 1: Use SQL builder to get IDs that match filters
+//     let filterQuery = db.select({ id: countriesTable.id }).from(countriesTable);
 
-    // Apply basic filters
-    if (filter.name) {
-      filterQuery = filterQuery.where(
-        ilike(countriesTable.name, `%${filter.name}%`),
-      );
-    }
+//     // Apply basic filters
+//     if (filter.name) {
+//       filterQuery = filterQuery.where(
+//         ilike(countriesTable.name, `%${filter.name}%`),
+//       );
+//     }
 
-    if (filter.cca3) {
-      filterQuery = filterQuery.where(eq(countriesTable.cca3, filter.cca3));
-    }
+//     if (filter.cca3) {
+//       filterQuery = filterQuery.where(eq(countriesTable.cca3, filter.cca3));
+//     }
 
-    if (filter.population?.min) {
-      filterQuery = filterQuery.where(
-        gte(countriesTable.population, filter.population.min),
-      );
-    }
+//     if (filter.population?.min) {
+//       filterQuery = filterQuery.where(
+//         gte(countriesTable.population, filter.population.min),
+//       );
+//     }
 
-    if (filter.population?.max) {
-      filterQuery = filterQuery.where(
-        lte(countriesTable.population, filter.population.max),
-      );
-    }
+//     if (filter.population?.max) {
+//       filterQuery = filterQuery.where(
+//         lte(countriesTable.population, filter.population.max),
+//       );
+//     }
 
-    // Apply advanced filters that need joins
-    if (filter.region) {
-      filterQuery = filterQuery
-        .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
-        .where(ilike(regionsTable.name, `%${filter.region}%`));
-    }
+//     // Apply advanced filters that need joins
+//     if (filter.region) {
+//       filterQuery = filterQuery
+//         .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+//         .where(ilike(regionsTable.name, `%${filter.region}%`));
+//     }
 
-    if (filter.subregion) {
-      filterQuery = filterQuery
-        .leftJoin(
-          subregionsTable,
-          eq(countriesTable.subregionId, subregionsTable.id),
-        )
-        .where(ilike(subregionsTable.name, `%${filter.subregion}%`));
-    }
+//     if (filter.subregion) {
+//       filterQuery = filterQuery
+//         .leftJoin(
+//           subregionsTable,
+//           eq(countriesTable.subregionId, subregionsTable.id),
+//         )
+//         .where(ilike(subregionsTable.name, `%${filter.subregion}%`));
+//     }
 
-    if (filter.language) {
-      filterQuery = filterQuery
-        .leftJoin(
-          countryLanguagesTable,
-          eq(countryLanguagesTable.countryId, countriesTable.id),
-        )
-        .leftJoin(
-          languagesTable,
-          eq(languagesTable.id, countryLanguagesTable.languageId),
-        )
-        .where(
-          or(
-            ilike(languagesTable.name, `%${filter.language}%`),
-            ilike(languagesTable.code, `%${filter.language}%`),
-          ),
-        );
-    }
+//     if (filter.language) {
+//       filterQuery = filterQuery
+//         .leftJoin(
+//           countryLanguagesTable,
+//           eq(countryLanguagesTable.countryId, countriesTable.id),
+//         )
+//         .leftJoin(
+//           languagesTable,
+//           eq(languagesTable.id, countryLanguagesTable.languageId),
+//         )
+//         .where(
+//           or(
+//             ilike(languagesTable.name, `%${filter.language}%`),
+//             ilike(languagesTable.code, `%${filter.language}%`),
+//           ),
+//         );
+//     }
 
-    if (filter.currency) {
-      filterQuery = filterQuery
-        .leftJoin(
-          countryCurrenciesTable,
-          eq(countryCurrenciesTable.countryId, countriesTable.id),
-        )
-        .leftJoin(
-          currenciesTable,
-          eq(currenciesTable.id, countryCurrenciesTable.currencyId),
-        )
-        .where(
-          or(
-            ilike(currenciesTable.name, `%${filter.currency}%`),
-            ilike(currenciesTable.code, `%${filter.currency}%`),
-          ),
-        );
-    }
+//     if (filter.currency) {
+//       filterQuery = filterQuery
+//         .leftJoin(
+//           countryCurrenciesTable,
+//           eq(countryCurrenciesTable.countryId, countriesTable.id),
+//         )
+//         .leftJoin(
+//           currenciesTable,
+//           eq(currenciesTable.id, countryCurrenciesTable.currencyId),
+//         )
+//         .where(
+//           or(
+//             ilike(currenciesTable.name, `%${filter.currency}%`),
+//             ilike(currenciesTable.code, `%${filter.currency}%`),
+//           ),
+//         );
+//     }
 
-    // Get distinct country IDs matching our filters
-    const filteredIds = await filterQuery
-      .groupBy(countriesTable.id)
-      .orderBy(countriesTable.id);
+//     // Get distinct country IDs matching our filters
+//     const filteredIds = await filterQuery
+//       .groupBy(countriesTable.id)
+//       .orderBy(countriesTable.id);
 
-    // Step 2: Count total matching countries
-    const totalCount = filteredIds.length;
+//     // Step 2: Count total matching countries
+//     const totalCount = filteredIds.length;
 
-    // Step 3: Apply pagination to IDs
-    const paginatedIds = filteredIds
-      .slice((page - 1) * pageSize, page * pageSize)
-      .map((row) => row.id);
+//     // Step 3: Apply pagination to IDs
+//     const paginatedIds = filteredIds
+//       .slice((page - 1) * pageSize, page * pageSize)
+//       .map((row) => row.id);
 
-    // Early return if no results
-    if (paginatedIds.length === 0) {
-      return {
-        data: [],
-        meta: {
-          total: totalCount,
-          page,
-          pageSize,
-          pageCount: Math.ceil(totalCount / pageSize),
-        },
-      };
-    }
+//     // Early return if no results
+//     if (paginatedIds.length === 0) {
+//       return {
+//         data: [],
+//         meta: {
+//           total: totalCount,
+//           page,
+//           pageSize,
+//           pageCount: Math.ceil(totalCount / pageSize),
+//         },
+//       };
+//     }
 
-    // Step 4: Now use the query builder with findMany to get the full data with relations
-    let queryOptions: any = {
-      where: inArray(countriesTable.id, paginatedIds),
-    };
+//     // Step 4: Now use the query builder with findMany to get the full data with relations
+//     let queryOptions: any = {
+//       where: inArray(countriesTable.id, paginatedIds),
+//     };
 
-    // Add relations if requested
-    if (includeRelations) {
-      queryOptions.with = {
-        region: true,
-        subregion: true,
-        languages: {
-          with: {
-            language: true,
-          },
-        },
-        currencies: {
-          with: {
-            currency: true,
-          },
-        },
-      };
-    }
+//     // Add relations if requested
+//     if (includeRelations) {
+//       queryOptions.with = {
+//         region: true,
+//         subregion: true,
+//         languages: {
+//           with: {
+//             language: true,
+//           },
+//         },
+//         currencies: {
+//           with: {
+//             currency: true,
+//           },
+//         },
+//       };
+//     }
 
-    // Apply sorting
-    const { field, direction } = sort;
-    if (field in countriesTable) {
-      queryOptions.orderBy = (columns: any) => [
-        direction === 'desc'
-          ? desc(columns[field as keyof typeof columns])
-          : asc(columns[field as keyof typeof columns]),
-      ];
-    }
+//     // Apply sorting
+//     const { field, direction } = sort;
+//     if (field in countriesTable) {
+//       queryOptions.orderBy = (columns: any) => [
+//         direction === 'desc'
+//           ? desc(columns[field as keyof typeof columns])
+//           : asc(columns[field as keyof typeof columns]),
+//       ];
+//     }
 
-    // Execute the query
-    const countries = await db.query.countriesTable.findMany(queryOptions);
+//     // Execute the query
+//     const countries = await db.query.countriesTable.findMany(queryOptions);
 
-    // Format the results
-    const formattedCountries = countries.map((country) => {
-      if (includeRelations) {
-        const languages = country.languages
-          ? country.languages.map((rel) => rel.language)
-          : [];
+//     // Format the results
+//     const formattedCountries = countries.map((country) => {
+//       if (includeRelations) {
+//         const languages = country.languages
+//           ? country.languages.map((rel) => rel.language)
+//           : [];
 
-        const currencies = country.currencies
-          ? country.currencies.map((rel) => rel.currency)
-          : [];
+//         const currencies = country.currencies
+//           ? country.currencies.map((rel) => rel.currency)
+//           : [];
 
-        return formattedCountryResponse(
-          country,
-          country.region || null,
-          country.subregion || null,
-          languages,
-          currencies,
-        );
-      } else {
-        return {
-          ...country,
-          region: null,
-          subregion: null,
-          languages: [],
-          currencies: [],
-        };
-      }
-    });
+//         return formattedCountryResponse(
+//           country,
+//           country.region || null,
+//           country.subregion || null,
+//           languages,
+//           currencies,
+//         );
+//       } else {
+//         return {
+//           ...country,
+//           region: null,
+//           subregion: null,
+//           languages: [],
+//           currencies: [],
+//         };
+//       }
+//     });
 
-    // Return paginated result
-    return {
-      data: formattedCountries,
-      meta: {
-        total: totalCount,
-        page,
-        pageSize,
-        pageCount: Math.ceil(totalCount / pageSize),
-      },
-    };
-  } catch (error) {
-    console.error('Error getting countries with filters:', error);
-    throw error;
-  }
-}
+//     // Return paginated result
+//     return {
+//       data: formattedCountries,
+//       meta: {
+//         total: totalCount,
+//         page,
+//         pageSize,
+//         pageCount: Math.ceil(totalCount / pageSize),
+//       },
+//     };
+
+// }
 export const getCountries = async ({
   pageSize = 25,
   page = 1,
@@ -316,6 +313,33 @@ export async function getCountryById(countryId: Country['id']): Promise<any> {
     throw new Error(`Country with ID ${countryId} not found`);
   }
   return country;
+}
+
+export async function bulkCreateCountriesEntity(
+  q: Transaction | DB,
+  countriesInputs: CountryInput[],
+): Promise<Country[] | []> {
+  if (countriesInputs.length) {
+    const insertedCountries = await q
+      .insert(countriesTable)
+      .values(countriesInputs)
+      .onConflictDoUpdate({
+        target: countriesTable.cca3,
+        set: {
+          name: sql`excluded.name`,
+          capital: sql`excluded.capital`,
+          regionId: sql`excluded.region_id`,
+          subregionId: sql`excluded.subregion_id`,
+          population: sql`excluded.population`,
+          flagSvg: sql`excluded.flag_svg`,
+          flagPng: sql`excluded.flag_png`,
+        },
+      })
+      .returning();
+    return insertedCountries;
+  } else {
+    return [];
+  }
 }
 
 async function createCountryEntity(

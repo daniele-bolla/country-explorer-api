@@ -34,15 +34,19 @@ export async function findOrCreateSubregion(
   return newSubregion;
 }
 
-export async function bulkCreateSubregion(
+export async function bulkCreateSubregions(
   q: Transaction | DB,
   subregions: SubregionInput[],
-): Promise<Subregion[]> {
-  const newSubregions = await q
-    .insert(subregionsTable)
-    .values(subregions)
-    .onConflictDoNothing()
-    .returning();
+): Promise<Subregion[] | []> {
+  if (subregions.length) {
+    const newSubregions = await q
+      .insert(subregionsTable)
+      .values(subregions)
+      .onConflictDoNothing()
+      .returning();
 
-  return newSubregions;
+    return newSubregions;
+  } else {
+    return [];
+  }
 }

@@ -1,20 +1,16 @@
-import { eq, sql, and } from 'drizzle-orm';
 import { adapterApiToCountryInput } from '../adapters/adapterAPI';
 import { db } from '../db';
-import {
-  countriesTable,
-  countryCurrenciesTable,
-  countryLanguagesTable,
-  currenciesTable,
-  languagesTable,
-  regionsTable,
-  subregionsTable,
-} from '../db/schema';
 import { fetchCountriesFromApi } from './CountriesApi';
 import { clearDatabase } from '../testutils/clearDatabase';
 import { findOrCreateRegion } from './RegionsService';
-import { bulkCreateSubregion } from './SubRegionsService';
-import { SubregionInput } from '../types/countryModel';
+import { bulkCreateSubregions } from './SubRegionsService';
+import { bulkCreateLanguages } from './LanguagesService';
+import { bulkCreateCurrencies } from './CurrenciesService';
+import { bulkCreateCountriesEntity } from './CountriesService';
+import {
+  bulkCreateCurrencyRelations,
+  bulkCreateLanguageRelations,
+} from './CountriesRelationsService';
 
 export async function importCountries() {
   const countries = await fetchCountriesFromApi();
@@ -45,152 +41,101 @@ export async function importCountries() {
     region,
     subregions: Array.from(subregionsSet),
   }));
+
   await clearDatabase();
 
   const regionIds = new Map<string, number>();
-  const subregionIdsArray: { name: string; id: number }[] = [];
+  try {
+    await db.transaction(async (tx) => {
+      /**
+       * Bulk create subregion for each region
+       */
+      const regionPromises = regionsArray.map(
+        async ({ region, subregions }) => {
+          const { id: regionId } = await findOrCreateRegion(tx, region);
 
-  await db.transaction(async (tx) => {
-    const regionPromises = regionsArray.map(async ({ region, subregions }) => {
-      const { id: regionId } = await findOrCreateRegion(tx, region);
+          regionIds.set(region, regionId);
 
-      regionIds.set(region, regionId);
+          const subregionsWithId = subregions.map((name) => ({
+            regionId,
+            name,
+          }));
 
-      const subregionsWithId = subregions.map((name) => ({
-        regionId,
-        name,
-      }));
+          const insertedSubregion = await bulkCreateSubregions(
+            tx,
+            subregionsWithId,
+          );
 
-      const newSubregions = (
-        await bulkCreateSubregion(tx, subregionsWithId)
-      ).map(({ name, id }) => ({ name, id }));
+          return insertedSubregion.map(({ name, id }) => ({ name, id }));
+        },
+      );
 
-      return newSubregions;
+      const allInsertedSubregion = await Promise.all(regionPromises);
+
+      const subregionIds = new Map(
+        allInsertedSubregion.flat().map(({ name, id }) => [name, id]),
+      );
+
+      /**
+       * Bulk insert languages
+       */
+      const languagesInputs = Array.from(languagesInputsMap.values());
+      const insertedLanguages = await bulkCreateLanguages(tx, languagesInputs);
+      const languagesIds = new Map(
+        insertedLanguages.map(({ code, id }) => [code, id]),
+      );
+
+      /**
+       * Bulk insert currencies
+       */
+      const currenciesInputs = Array.from(currenciesInputsMap.values());
+      const insertedcurrencies = await bulkCreateCurrencies(
+        tx,
+        currenciesInputs,
+      );
+      const currenciesIds = new Map(
+        insertedcurrencies.map(({ code, id }) => [code, id]),
+      );
+
+      /**
+       * Bulk insert countries
+       */
+      const countriesInputs = adaptedCountries.map(
+        ({ region, subregion, ...rest }) => ({
+          ...rest,
+          region,
+          subregion,
+          regionId: regionIds.get(region),
+          subregionId: subregionIds.get(subregion),
+        }),
+      );
+      const insertedCountries = await bulkCreateCountriesEntity(
+        tx,
+        countriesInputs,
+      );
+      const countriesIds = new Map(
+        insertedCountries.map(({ cca3, id }) => [cca3, id]),
+      );
+
+      /**
+       * Bulk country-relations
+       */
+      const countryLanguagesInputs = countriesInputs.flatMap((country) =>
+        country.languages.map((language) => ({
+          countryId: countriesIds.get(country.cca3)!,
+          languageId: languagesIds.get(language.code)!,
+        })),
+      );
+      const countryCurrenciesInputs = countriesInputs.flatMap((country) =>
+        country.currencies.map((currency) => ({
+          countryId: countriesIds.get(country.cca3)!,
+          currencyId: currenciesIds.get(currency.code)!,
+        })),
+      );
+      await bulkCreateLanguageRelations(tx, countryLanguagesInputs);
+      await bulkCreateCurrencyRelations(tx, countryCurrenciesInputs);
     });
-
-    const allNewSubregions = await Promise.all(regionPromises);
-    subregionIdsArray.push(...allNewSubregions.flat());
-
-    const subregionIds = new Map(
-      subregionIdsArray.map(({ name, id }) => [name, id]),
-    );
-
-    // Insert languages and store IDs
-    const languagesInputs = Array.from(languagesInputsMap.values());
-
-    const insertedLanguages = await tx
-      .insert(languagesTable)
-      .values(languagesInputs)
-      .onConflictDoUpdate({
-        target: languagesTable.code,
-        set: {
-          name: sql`excluded.name`,
-        },
-      })
-      .returning();
-
-    const languagesIds = new Map(
-      insertedLanguages.map(({ code, id }) => [code, id]),
-    );
-    console.log(languagesIds);
-
-    // Insert languages and store IDs
-    const currenciesInputs = Array.from(currenciesInputsMap.values());
-
-    const insertedcurrencies = await tx
-      .insert(currenciesTable)
-      .values(currenciesInputs)
-      .onConflictDoUpdate({
-        target: currenciesTable.code,
-        set: {
-          code: sql`excluded.name`,
-        },
-      })
-      .returning();
-
-    const currenciesIds = new Map(
-      insertedcurrencies.map(({ code, id }) => [code, id]),
-    );
-
-    console.log(currenciesIds);
-    // .map(
-    //   async (language) => {
-    //     const [newLanguage] = await tx
-    //       .insert(languagesTable)
-    //       .values(language)
-    //       .onConflictDoUpdate({
-    //         target: languagesTable.code,
-    //         set: {
-    //           name: sql`excluded.name`,
-    //         },
-    //       })
-    //       .returning();
-
-    //     return newLanguage;
-    //   },
-    // );
-
-    // const insertedLanguages = await Promise.all(languagePromises);
-    // insertedLanguages.forEach((lang) => {
-    //   languageIds.set(lang.code, lang.id);
-    // });
-
-    // Prepare and insert countries
-
-    const countriesInputs = adaptedCountries.map(
-      ({ region, subregion, ...rest }) => ({
-        ...rest,
-        regionId: regionIds.get(region),
-        subregionId: subregionIds.get(subregion),
-      }),
-    );
-
-    const insertedCountries = await tx
-      .insert(countriesTable)
-      .values(countriesInputs)
-      .onConflictDoUpdate({
-        target: countriesTable.cca3,
-        set: {
-          name: sql`excluded.name`,
-          capital: sql`excluded.capital`,
-          regionId: sql`excluded.region_id`,
-          subregionId: sql`excluded.subregion_id`,
-          population: sql`excluded.population`,
-          flagSvg: sql`excluded.flag_svg`,
-          flagPng: sql`excluded.flag_png`,
-        },
-      })
-      .returning();
-
-    /**
-     * Bulk Country Relations
-     */
-    const countriesIds = new Map(
-      insertedCountries.map(({ cca3, id }) => [cca3, id]),
-    );
-
-    const countryLanguagesInputs = countriesInputs.flatMap((country) =>
-      country.languages.map((language) => ({
-        countryId: countriesIds.get(country.cca3)!,
-        languageId: languagesIds.get(language.code)!,
-      })),
-    );
-
-    const insertCountriesLanguages = await tx
-      .insert(countryLanguagesTable)
-      .values(countryLanguagesInputs)
-      .onConflictDoNothing();
-
-    const countryCurrenciesInputs = countriesInputs.flatMap((country) =>
-      country.currencies.map((currency) => ({
-        countryId: countriesIds.get(country.cca3)!,
-        currencyId: currenciesIds.get(currency.code)!,
-      })),
-    );
-
-    const insertCountriesCurrenies = await tx
-      .insert(countryCurrenciesTable)
-      .values(countryCurrenciesInputs)
-      .onConflictDoNothing();
-  });
+  } catch (error) {
+    console.error(error);
+  }
 }

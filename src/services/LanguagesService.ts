@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { Language, languagesTable } from '../db/schema';
 import { DB, Transaction } from '../db';
+import { LanguageInput } from '../types/countryModel';
 
 export async function findOrCreateLanguage(
   q: Transaction | DB,
@@ -28,4 +29,25 @@ export async function findOrCreateLanguage(
     .returning();
 
   return newLang;
+}
+
+export async function bulkCreateLanguages(
+  q: Transaction | DB,
+  languagesInputs: LanguageInput[],
+): Promise<Language[] | []> {
+  if (languagesInputs.length) {
+    const insertedLanguages = await q
+      .insert(languagesTable)
+      .values(languagesInputs)
+      .onConflictDoUpdate({
+        target: languagesTable.code,
+        set: {
+          name: sql`excluded.name`,
+        },
+      })
+      .returning();
+    return insertedLanguages;
+  } else {
+    return [];
+  }
 }

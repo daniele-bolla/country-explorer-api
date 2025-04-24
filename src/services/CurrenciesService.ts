@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { currenciesTable, Currency } from '../db/schema';
 import { Transaction, DB } from '../db';
+import { CurrencyInput } from '../types/countryModel';
 
 export async function findOrCreateCurrency(
   q: Transaction | DB,
@@ -28,4 +29,24 @@ export async function findOrCreateCurrency(
     .returning();
 
   return newCurr;
+}
+export async function bulkCreateCurrencies(
+  q: Transaction | DB,
+  CurrenciesInputs: CurrencyInput[],
+): Promise<Currency[] | []> {
+  if (CurrenciesInputs.length) {
+    const insertedCurrencies = await q
+      .insert(currenciesTable)
+      .values(CurrenciesInputs)
+      .onConflictDoUpdate({
+        target: currenciesTable.code,
+        set: {
+          name: sql`excluded.name`,
+        },
+      })
+      .returning();
+    return insertedCurrencies;
+  } else {
+    return [];
+  }
 }

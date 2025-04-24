@@ -18,7 +18,7 @@ export async function fetchCountriesFromApi(): Promise<CountryApiResponse[]> {
   //   `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
   // );
   const { data } = await ApiService.get(
-    `${config.api.countriesBaseUrl}/region/europe?fields=${wtihFields.join(',')}`,
+    `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
   );
   return data;
 }

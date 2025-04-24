@@ -12,6 +12,7 @@ import {
   Region,
   Subregion,
 } from '../db/schema';
+
 import { findOrCreateCurrency } from './CurrenciesService';
 import { findOrCreateRegion } from './RegionsService';
 import { findOrCreateSubregion } from './SubRegionsService';
@@ -58,6 +59,22 @@ export async function createLanguageRelations(
   }
 }
 
+type CountryLanguagesIds = {
+  countryId: number;
+  languageId: number;
+};
+export async function bulkCreateLanguageRelations(
+  q: Transaction | DB,
+  countryLanguagesInputs: CountryLanguagesIds[],
+): Promise<void> {
+  if (countryLanguagesInputs.length) {
+    await q
+      .insert(countryLanguagesTable)
+      .values(countryLanguagesInputs)
+      .onConflictDoNothing();
+  }
+}
+
 export async function createCurrencyRelations(
   q: Transaction | DB,
   countryId: number,
@@ -70,6 +87,22 @@ export async function createCurrencyRelations(
         countryId,
         currencyId: currency.id,
       })
+      .onConflictDoNothing();
+  }
+}
+
+type CountryCurrenciesIds = {
+  countryId: number;
+  currencyId: number;
+};
+export async function bulkCreateCurrencyRelations(
+  q: Transaction | DB,
+  countryCurrenciesInputs: CountryCurrenciesIds[],
+): Promise<void> {
+  if (countryCurrenciesInputs.length) {
+    await q
+      .insert(countryCurrenciesTable)
+      .values(countryCurrenciesInputs)
       .onConflictDoNothing();
   }
 }

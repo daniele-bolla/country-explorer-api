@@ -81,7 +81,9 @@ export async function updateCountryHandler(
   h: ResponseToolkit,
 ) {
   const { id } = request.params;
-  const countryData = request.payload as UpdateCountryInput;
+  const countryData = definedPropertiesOnly(
+    request.payload,
+  ) as UpdateCountryInput;
   try {
     const updatedCountry = await updateCountry(countryData, Number(id));
     return h

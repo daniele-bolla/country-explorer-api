@@ -64,3 +64,16 @@ export interface CountryResponse
   region?: RegionInput['name'];
   subregion?: SubregionInput['name'];
 }
+
+export interface UpdateCountryInput {
+  name?: string;
+  cca3?: string;
+  capital?: string[];
+  region?: string;
+  subregion?: string;
+  population?: number;
+  flagSvg?: string;
+  flagPng?: string;
+  languages?: Array<{ code: string; name: string }>;
+  currencies?: Array<{ code: string; name: string }>;
+}

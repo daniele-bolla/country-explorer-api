@@ -2,22 +2,34 @@ import { DB, Transaction } from '../db';
 import { Subregion, subregionsTable } from '../db/schema';
 import { and, eq, Name } from 'drizzle-orm';
 import { SubregionInput } from '../types/countryModel';
-
+export async function selectSubregionbyName(
+  q: Transaction | DB,
+  subregionName: string,
+): Promise<Subregion> {
+  const [existingRegion] = await q
+    .select()
+    .from(subregionsTable)
+    .where(eq(subregionsTable.name, subregionName))
+    .limit(1);
+  return existingRegion;
+}
+export async function selectSubregionbyId(
+  q: Transaction | DB,
+  subregionId: number,
+): Promise<Subregion> {
+  const [existingRegion] = await q
+    .select()
+    .from(subregionsTable)
+    .where(eq(subregionsTable.id, subregionId))
+    .limit(1);
+  return existingRegion;
+}
 export async function findOrCreateSubregion(
   q: Transaction | DB,
   subregionName: string,
   regionId: number,
 ): Promise<Subregion> {
-  const [existingSubregion] = await q
-    .select()
-    .from(subregionsTable)
-    .where(
-      and(
-        eq(subregionsTable.name, subregionName),
-        eq(subregionsTable.regionId, regionId),
-      ),
-    )
-    .limit(1);
+  const existingSubregion = await selectSubregionbyName(q, subregionName);
 
   if (existingSubregion) {
     return existingSubregion;

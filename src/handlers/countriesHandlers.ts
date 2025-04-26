@@ -5,10 +5,9 @@ import {
   getCountries,
   getCountryById,
   updateCountry,
-  UpdateCountryInput,
 } from '../services/CountriesService';
 
-import { CountryInput } from '../types/countryModel';
+import { CountryInput, UpdateCountryInput } from '../types/countryModel';
 import { errorResponseHandler } from './errorResponseHandler';
 import { definedPropertiesOnly } from '../utils/definedPropertiesOnly';
 

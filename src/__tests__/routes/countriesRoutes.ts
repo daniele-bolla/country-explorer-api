@@ -8,7 +8,7 @@ import {
   countriesWithMultipleLanguages,
   countriesWithEuro,
 } from '../../fixtures/countries';
-import { bulkCreateCountries } from '../../services/PopulateCountriesFromAPIService';
+import { bulkCreateCountries } from '../../services/ImportCountriesService';
 import { CountryResponse } from '../../types/countryModel';
 
 describe('Country Routes', () => {

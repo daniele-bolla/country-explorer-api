@@ -7,7 +7,7 @@ import routes from './routes/index';
 import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
-import { importCountriesFromApi } from './services/PopulateCountriesFromAPIService';
+import { importCountriesFromApi } from './services/ImportCountriesService';
 
 export const init = async (serverPort?: number) => {
   const server = Hapi.server({

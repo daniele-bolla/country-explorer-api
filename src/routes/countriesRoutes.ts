@@ -46,7 +46,7 @@ export default {
         },
       },
       {
-        method: 'PUT',
+        method: 'PATCH',
         path: '/api/countries/{id}',
         handler: updateCountryHandler,
         options: {

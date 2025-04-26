@@ -89,5 +89,16 @@ export const updateCountryValidation = {
   params: Joi.object({
     id,
   }),
-  payload: createCountryValidation.payload.options({ stripUnknown: true }),
+  payload: Joi.object({
+    name,
+    cca3,
+    capital,
+    region,
+    subregion,
+    population,
+    flagSvg,
+    flagPng,
+    languages,
+    currencies,
+  }).options({ stripUnknown: true }),
 };

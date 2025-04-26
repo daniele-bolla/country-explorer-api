@@ -10,17 +10,53 @@ import {
 
 import { CountryInput } from '../types/countryModel';
 import { errorResponseHandler } from './errorResponseHandler';
+import { definedPropertiesOnly } from '../utils/definedPropertiesOnly';
 
+/**
+ * Handler for getting countries with filtering, sorting and pagination
+ */
 export async function getAllCountriesHandler(
   request: Request,
   h: ResponseToolkit,
 ) {
-  const { limit = 50, offset = 1 } = request.query;
-  const countries = await getCountries({
-    pageSize: Number(limit),
-    page: Number(offset),
-  });
   try {
+    const {
+      page,
+      pageSize,
+      includeRelations,
+      sortField,
+      sortDirection,
+      populationMin,
+      populationMax,
+      ...filterParams
+    } = request.query;
+
+    const filter = definedPropertiesOnly({
+      ...definedPropertiesOnly(filterParams),
+
+      ...((populationMin || populationMax) && {
+        population: definedPropertiesOnly({
+          min: populationMin,
+          max: populationMax,
+        }),
+      }),
+    });
+
+    const sort =
+      sortField && sortDirection
+        ? { field: sortField, direction: sortDirection }
+        : undefined;
+
+    const countries = await getCountries(
+      definedPropertiesOnly({
+        page,
+        pageSize,
+        includeRelations,
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        sort,
+      }),
+    );
+
     return h.response(countries).code(200);
   } catch (error) {
     return errorResponseHandler(error as Error);
@@ -45,7 +81,9 @@ export async function updateCountryHandler(
   h: ResponseToolkit,
 ) {
   const { id } = request.params;
-  const countryData = request.payload as UpdateCountryInput;
+  const countryData = definedPropertiesOnly(
+    request.payload,
+  ) as UpdateCountryInput;
   try {
     const updatedCountry = await updateCountry(countryData, Number(id));
     return h

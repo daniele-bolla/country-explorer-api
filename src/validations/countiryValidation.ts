@@ -27,18 +27,35 @@ const currencies = Joi.array().items(
     }),
   ),
 );
+const language = Joi.string();
+const currency = Joi.string();
+const populationMin = Joi.number().integer().min(0);
+const populationMax = Joi.number().integer().min(0);
+const sortField = Joi.string()
+  .valid('name', 'population', 'region', 'cca3', 'capital')
+  .default('name');
+const sortDirection = Joi.string().valid('asc', 'desc').default('asc');
 
-const pageSize = Joi.number().integer().min(1).max(100).default(50).optional();
-const page = Joi.number().integer().min(0).default(0).optional();
+const includeRelations = Joi.boolean().default(true);
+const pageSize = Joi.number().integer().min(1).max(100).default(25).optional();
+const page = Joi.number().integer().min(1).default(1).optional();
+
 export const gettAllCountriesValidation = {
   query: Joi.object({
-    field: Joi.string()
-      .valid('code', 'name', 'region', 'languages', 'currencies')
-      .optional(),
-    value: Joi.string().optional(),
+    name,
+    cca3,
+    region,
+    subregion,
+    language,
+    currency,
+    populationMin,
+    populationMax,
+    sortField,
+    sortDirection,
+    includeRelations,
     pageSize,
     page,
-  }),
+  }).options({ stripUnknown: true }),
 };
 
 export const createCountryValidation = {
@@ -72,16 +89,5 @@ export const updateCountryValidation = {
   params: Joi.object({
     id,
   }),
-  payload: Joi.object({
-    name: name.optional(),
-    cca3: cca3.optional(),
-    capital: capital.optional(),
-    region: region.optional(),
-    subregion: subregion.optional(),
-    flagSvg: flagSvg.optional(),
-    flagPng: flagPng.optional(),
-    population: population.optional(),
-    languages: languages.optional(),
-    currencies: currencies.optional(),
-  }),
+  payload: createCountryValidation.payload.options({ stripUnknown: true }),
 };

@@ -20,8 +20,6 @@ export const init = async (serverPort?: number) => {
     },
   });
 
-  await importCountriesFromApi();
-
   // Register Swagger documentation
   //   const swaggerOptions = {
   //     info: {
@@ -39,25 +37,19 @@ export const init = async (serverPort?: number) => {
   //     },
   //   ]);
 
-  // Register routes
   await routes(server);
-  // Check if database is empty and populate if needed
-  // try {
-  //   // await db.delete(countriesTable);
-  //   // const syncResult = await importCountries();
+  try {
+    const [result] = await db.select({ count: count() }).from(countriesTable);
 
-  //   const [result] = await db.select({ count: count() }).from(countriesTable);
-
-  //   if (result.count === 0) {
-  //     console.log('Database is empty. Loading initial country data...');
-  //     // const syncResult = await importCountries();
-  //     // console.log('Initial data loaded:', syncResult);
-  //   } else {
-  //     console.log(`Database already contains ${result.count} countries.`);
-  //   }
-  // } catch (error) {
-  //   console.error('Error checking/loading initial data:', error);
-  // }
+    if (result.count === 0) {
+      console.log('Database is empty. Loading initial country data...');
+      await importCountriesFromApi();
+    } else {
+      console.log(`Database already contains ${result.count} countries.`);
+    }
+  } catch (error) {
+    console.error('Error checking/loading initial data:', error);
+  }
 
   await server.start();
   console.log(`Server running on ${server.info.uri}`);

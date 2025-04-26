@@ -64,8 +64,8 @@ export async function importCountriesFromApi() {
     0,
   );
 
-  await clearDatabase();
-  console.log('🧹 Database cleared');
+  // await clearDatabase();
+  // console.log('🧹 Database cleared');
 
   const regionIds = new Map<string, number>();
   try {

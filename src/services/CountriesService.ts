@@ -1,12 +1,17 @@
 import {
   and,
+  asc,
   count,
+  desc,
   eq,
   gte,
   ilike,
+  inArray,
   isNotNull,
   lte,
   notInArray,
+  or,
+  SQL,
   sql,
 } from 'drizzle-orm';
 import { DB, db, Transaction } from '../db/index';
@@ -15,14 +20,17 @@ import {
   countriesTable,
   Country,
   countryCurrenciesTable,
+  countryLanguagesRelations,
   countryLanguagesTable,
   currenciesTable,
   Currency,
   Language,
   languagesTable,
   Region,
+  regionRelations,
   regionsTable,
   Subregion,
+  subregionRelations,
   subregionsTable,
 } from '../db/schema';
 import {
@@ -48,7 +56,7 @@ import {
   updateCountrySubregion,
 } from './CountriesRelationsService';
 import { PaginatedResult } from '../types/pagination';
-import { CountryListOptions } from '../types/countryFilters';
+import { CountryFilter, CountryListOptions } from '../types/countryFilters';
 
 function formattedCountryResponse(
   country: Country,
@@ -69,133 +77,10 @@ function formattedCountryResponse(
 async function selectCountryById(
   q: Transaction | DB,
   countryId: Country['id'],
-): Promise<CountryEntity | undefined> {
+  includeRelations: boolean = true,
+): Promise<CountryEntity | Country | undefined> {
   const countryResult = await q.query.countriesTable.findFirst({
     where: eq(countriesTable.id, countryId),
-    with: {
-      region: true,
-      subregion: true,
-      languages: {
-        with: {
-          language: true,
-        },
-      },
-      currencies: {
-        with: {
-          currency: true,
-        },
-      },
-    },
-  });
-
-  return countryResult;
-}
-
-export async function getCountries({
-  pageSize = 25,
-  page = 1,
-  filter = {},
-  sort = { field: 'name', direction: 'asc' },
-  includeRelations = false,
-}: CountryListOptions = {}): Promise<PaginatedResult<any>> {
-  const whereConditions = [];
-
-  if (filter.name) {
-    whereConditions.push(ilike(countriesTable.name, `%${filter.name}%`));
-  }
-
-  if (filter.cca3) {
-    whereConditions.push(eq(countriesTable.cca3, filter.cca3));
-  }
-
-  if (filter.population?.min) {
-    whereConditions.push(gte(countriesTable.population, filter.population.min));
-  }
-
-  if (filter.population?.max) {
-    whereConditions.push(lte(countriesTable.population, filter.population.max));
-  }
-
-  // Get total count for pagination
-  const [{ value: total }] = await db
-    .select({ value: count() })
-    .from(countriesTable)
-    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-
-  // Execute query with all options
-  const countries = await db.query.countriesTable.findMany({
-    where: (countries, { eq, and, or, sql, ilike }) => {
-      const conditions = [];
-
-      if (filter.name) {
-        conditions.push(ilike(countries.name, `%${filter.name}%`));
-      }
-
-      if (filter.cca3) {
-        conditions.push(eq(countries.cca3, filter.cca3));
-      }
-
-      if (filter.population?.min) {
-        conditions.push(gte(countries.population, filter.population.min));
-      }
-
-      if (filter.population?.max) {
-        conditions.push(lte(countries.population, filter.population.max));
-      }
-
-      if (filter.region) {
-        whereConditions.push(sql`exists (
-          select 1 from ${regionsTable}
-          where ${regionsTable.id} = ${countries.regionId}
-          and ${ilike(regionsTable.name, `%${filter.region}%`)}
-        )`);
-      }
-
-      if (filter.subregion) {
-        conditions.push(sql`exists (
-          select 1 from ${subregionsTable}
-          where ${subregionsTable.id} = ${countries.subregionId}
-          and ${ilike(subregionsTable.name, `%${filter.subregion}%`)}
-        )`);
-      }
-
-      if (filter.language) {
-        conditions.push(sql`exists (
-          select 1 from ${countryLanguagesTable}
-          join ${languagesTable} on ${languagesTable.id} = ${countryLanguagesTable.languageId}
-          where ${countryLanguagesTable.countryId} = ${countries.id}
-          and (${ilike(languagesTable.name, `%${filter.language}%`)} 
-               or ${ilike(languagesTable.code, `%${filter.language}%`)})
-        )`);
-      }
-
-      if (filter.currency) {
-        conditions.push(sql`exists (
-          select 1 from ${countryCurrenciesTable}
-          join ${currenciesTable} on ${currenciesTable.id} = ${countryCurrenciesTable.currencyId}
-          where ${countryCurrenciesTable.countryId} = ${countries.id}
-          and (${ilike(currenciesTable.name, `%${filter.currency}%`)} 
-               or ${ilike(currenciesTable.code, `%${filter.currency}%`)})
-        )`);
-      }
-
-      return conditions.length ? and(...conditions) : undefined;
-    },
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-    orderBy: (countries, { asc, desc }) => {
-      if (sort.field === 'name') {
-        return sort.direction === 'desc'
-          ? desc(countries.name)
-          : asc(countries.name);
-      }
-      if (sort.field === 'population') {
-        return sort.direction === 'desc'
-          ? desc(countries.population)
-          : asc(countries.population);
-      }
-      return asc(countries.id); // Default sort
-    },
     with: includeRelations
       ? {
           region: true,
@@ -214,8 +99,180 @@ export async function getCountries({
       : undefined,
   });
 
+  return countryResult;
+}
+
+function buildCountryFilters(filter: CountryFilter = {}) {
+  return (countriesTable: any, { eq, and, or, ilike, gte, lte, sql }: any) => {
+    const clauses: any[] = [];
+
+    if (filter.name) {
+      clauses.push(ilike(countriesTable.name, `%${filter.name}%`));
+    }
+    if (filter.cca3) {
+      clauses.push(eq(countriesTable.cca3, filter.cca3));
+    }
+    if (filter.population?.min != null) {
+      clauses.push(gte(countriesTable.population, filter.population.min!));
+    }
+    if (filter.population?.max != null) {
+      clauses.push(lte(countriesTable.population, filter.population.max!));
+    }
+
+    if (filter.region) {
+      clauses.push(ilike(regionsTable.name, `%${filter.region}%`));
+    }
+    if (filter.subregion) {
+      clauses.push(ilike(subregionsTable.name, `%${filter.subregion}%`));
+    }
+
+    if (filter.language) {
+      clauses.push(
+        or(
+          ilike(languagesTable.name, `%${filter.language!}%`),
+          ilike(languagesTable.code, `%${filter.language!}%`),
+        ),
+      );
+    }
+
+    if (filter.currency) {
+      clauses.push(
+        or(
+          ilike(currenciesTable.name, `%${filter.currency}%`),
+          ilike(currenciesTable.code, `%${filter.currency}%`),
+        ),
+      );
+    }
+
+    return clauses.length ? and(...clauses) : undefined;
+  };
+}
+
+// Reusable sort builder function
+function buildCountrySort(sort: { field: string; direction: 'asc' | 'desc' }) {
+  const orderColumnMap = {
+    name: countriesTable.name,
+    population: countriesTable.population,
+    region: regionsTable.name,
+    subregion: subregionsTable.name,
+    cca3: countriesTable.cca3,
+    capital: countriesTable.capital,
+  } as const;
+
+  const col =
+    (orderColumnMap as Record<string, any>)[sort.field] ?? countriesTable.name;
+
+  const orderExpr = sort.direction === 'asc' ? asc(col) : desc(col);
+  return orderExpr;
+}
+
+function buildRelations(
+  includeRelations: boolean = true,
+): Record<any, any> | undefined {
+  return includeRelations
+    ? {
+        region: true,
+        subregion: true,
+        languages: {
+          with: {
+            language: true,
+          },
+        },
+        currencies: {
+          with: {
+            currency: true,
+          },
+        },
+      }
+    : undefined;
+}
+
+export async function getCountries({
+  pageSize = 25,
+  page = 1,
+  filter = {},
+  sort = { field: 'name', direction: 'asc' },
+}: CountryListOptions = {}): Promise<PaginatedResult<any>> {
+  const [{ total: rawTotal }] = await db
+    .select({ total: sql`COUNT(DISTINCT ${countriesTable.id})` })
+    .from(countriesTable)
+    .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+    .leftJoin(
+      subregionsTable,
+      eq(countriesTable.subregionId, subregionsTable.id),
+    )
+    .leftJoin(
+      countryLanguagesTable,
+      eq(countriesTable.id, countryLanguagesTable.countryId),
+    )
+    .leftJoin(
+      languagesTable,
+      eq(countryLanguagesTable.languageId, languagesTable.id),
+    )
+    .leftJoin(
+      countryCurrenciesTable,
+      eq(countriesTable.id, countryCurrenciesTable.countryId),
+    )
+    .leftJoin(
+      currenciesTable,
+      eq(countryCurrenciesTable.currencyId, currenciesTable.id),
+    )
+    .where(
+      buildCountryFilters(filter)(countriesTable, {
+        eq,
+        and,
+        or,
+        ilike,
+        gte,
+        lte,
+        sql,
+      }),
+    )
+    .execute();
+  const total = Number(rawTotal);
+
+  const data = await db
+    .select()
+    .from(countriesTable)
+    .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+    .leftJoin(
+      subregionsTable,
+      eq(countriesTable.subregionId, subregionsTable.id),
+    )
+    .leftJoin(
+      countryLanguagesTable,
+      eq(countriesTable.id, countryLanguagesTable.countryId),
+    )
+    .leftJoin(
+      languagesTable,
+      eq(countryLanguagesTable.languageId, languagesTable.id),
+    )
+    .leftJoin(
+      countryCurrenciesTable,
+      eq(countriesTable.id, countryCurrenciesTable.countryId),
+    )
+    .leftJoin(
+      currenciesTable,
+      eq(countryCurrenciesTable.currencyId, currenciesTable.id),
+    )
+    .where(
+      buildCountryFilters(filter)(countriesTable, {
+        eq,
+        and,
+        or,
+        ilike,
+        gte,
+        lte,
+        sql,
+      }),
+    )
+    .orderBy(buildCountrySort(sort))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+    .execute();
+
   return {
-    data: countries,
+    data,
     meta: {
       total,
       page,

@@ -7,6 +7,7 @@ import config from '../config';
 const connectionString = `postgres://${config.db.user}:${config.db.password}@${config.db.host}:${config.db.port}/${config.db.database}`;
 export const db = drizzle(connectionString, {
   schema,
+  logger: false,
 });
 
 export type DB = typeof db;

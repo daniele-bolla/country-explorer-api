@@ -1,17 +1,14 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   gte,
   ilike,
-  inArray,
   isNotNull,
   lte,
   notInArray,
   or,
-  SQL,
   sql,
 } from 'drizzle-orm';
 import { DB, db, Transaction } from '../db/index';
@@ -20,17 +17,14 @@ import {
   countriesTable,
   Country,
   countryCurrenciesTable,
-  countryLanguagesRelations,
   countryLanguagesTable,
   currenciesTable,
   Currency,
   Language,
   languagesTable,
   Region,
-  regionRelations,
   regionsTable,
   Subregion,
-  subregionRelations,
   subregionsTable,
 } from '../db/schema';
 import {
@@ -81,22 +75,7 @@ async function selectCountryById(
 ): Promise<CountryEntity | Country | undefined> {
   const countryResult = await q.query.countriesTable.findFirst({
     where: eq(countriesTable.id, countryId),
-    with: includeRelations
-      ? {
-          region: true,
-          subregion: true,
-          languages: {
-            with: {
-              language: true,
-            },
-          },
-          currencies: {
-            with: {
-              currency: true,
-            },
-          },
-        }
-      : undefined,
+    with: buildRelations(includeRelations),
   });
 
   return countryResult;
@@ -148,24 +127,6 @@ function buildCountryFilters(filter: CountryFilter = {}) {
   };
 }
 
-// Reusable sort builder function
-function buildCountrySort(sort: { field: string; direction: 'asc' | 'desc' }) {
-  const orderColumnMap = {
-    name: countriesTable.name,
-    population: countriesTable.population,
-    region: regionsTable.name,
-    subregion: subregionsTable.name,
-    cca3: countriesTable.cca3,
-    capital: countriesTable.capital,
-  } as const;
-
-  const col =
-    (orderColumnMap as Record<string, any>)[sort.field] ?? countriesTable.name;
-
-  const orderExpr = sort.direction === 'asc' ? asc(col) : desc(col);
-  return orderExpr;
-}
-
 function buildRelations(
   includeRelations: boolean = true,
 ): Record<any, any> | undefined {
@@ -186,6 +147,136 @@ function buildRelations(
       }
     : undefined;
 }
+
+function buildCountrySort(sort: { field: string; direction: 'asc' | 'desc' }) {
+  const orderColumnMap = {
+    name: countriesTable.name,
+    population: countriesTable.population,
+    region: regionsTable.name,
+    subregion: subregionsTable.name,
+    cca3: countriesTable.cca3,
+    capital: countriesTable.capital,
+  } as const;
+
+  const col =
+    (orderColumnMap as Record<string, any>)[sort.field] ?? countriesTable.name;
+
+  const orderExpr = sort.direction === 'asc' ? asc(col) : desc(col);
+  return orderExpr;
+}
+
+// export async function getCountries({
+//   pageSize = 25,
+//   page = 1,
+//   filter = {},
+//   sort = { field: 'name', direction: 'asc' },
+// }: CountryListOptions = {}): Promise<PaginatedResult<any>> {
+//   // Step 1: First get sorted countries with basic info
+//   const sortField = sort.field;
+//   const sortDirection = sort.direction;
+
+//   // Map sort field to actual column
+//   let sortColumn;
+//   if (sortField === 'population') {
+//     sortColumn = countriesTable.population;
+//   } else if (sortField === 'name') {
+//     sortColumn = countriesTable.name;
+//   } else {
+//     sortColumn = countriesTable.name; // Default
+//   }
+
+//   // Get paged & sorted countries
+//   const countryQuery = db
+//     .select()
+//     .from(countriesTable)
+//     .orderBy(buildCountrySort(sort))
+//     .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
+//     .leftJoin(
+//       subregionsTable,
+//       eq(countriesTable.subregionId, subregionsTable.id),
+//     )
+//     .where(
+//       buildCountryFilters(filter)(countriesTable, {
+//         eq,
+//         and,
+//         or,
+//         ilike,
+//         gte,
+//         lte,
+//         sql,
+//       }),
+//     );
+
+//   // Add pagination
+//   const countries = await countryQuery
+//     .limit(pageSize)
+//     .offset((page - 1) * pageSize);
+
+//   // Step 2: Get count for pagination
+//   const [{ total: rawTotal }] = await db
+//     .select({ total: sql`COUNT(DISTINCT ${countriesTable.id})` })
+//     .from(countriesTable)
+//     .where(
+//       buildCountryFilters(filter)(countriesTable, {
+//         eq,
+//         and,
+//         or,
+//         ilike,
+//         gte,
+//         lte,
+//         sql,
+//       }),
+//     );
+
+//   const total = Number(rawTotal);
+
+//   // Step 3: For each country, get its languages and currencies
+//   const result = await Promise.all(
+//     countries.map(async ({ countries: country }) => {
+//       // Get languages
+//       const languages = await getCountryLanguages(db, country.id);
+
+//       // Get currencies
+//       const currencies = await getCountryCurrencies(db, country.id);
+
+//       // Get region and subregion
+//       const region = country.regionId
+//         ? await db
+//             .select()
+//             .from(regionsTable)
+//             .where(eq(regionsTable.id, country.regionId))
+//             .then((r) => r[0] || null)
+//         : null;
+
+//       const subregion = country.subregionId
+//         ? await db
+//             .select()
+//             .from(subregionsTable)
+//             .where(eq(subregionsTable.id, country.subregionId))
+//             .then((r) => r[0] || null)
+//         : null;
+
+//       // Format the response
+//       return formattedCountryResponse(
+//         country,
+//         region,
+//         subregion,
+//         languages,
+//         currencies,
+//       );
+//     }),
+//   );
+
+//   return {
+//     data: result,
+//     meta: {
+//       total,
+//       page,
+//       pageSize,
+//       pageCount: Math.ceil(total / pageSize),
+//     },
+//   };
+// }
 
 export async function getCountries({
   pageSize = 25,
@@ -230,10 +321,28 @@ export async function getCountries({
     )
     .execute();
   const total = Number(rawTotal);
+  const orderByQuery = buildCountrySort(sort);
 
   const data = await db
-    .select()
+    .select({
+      id: countriesTable.id,
+      name: countriesTable.name,
+      cca3: countriesTable.cca3,
+      capital: countriesTable.capital,
+      population: countriesTable.population,
+      flagSvg: countriesTable.flagSvg,
+      flagPng: countriesTable.flagPng,
+      createdAt: countriesTable.createdAt,
+      updatedAt: countriesTable.updatedAt,
+      regionId: countriesTable.regionId,
+      subregionId: countriesTable.subregionId,
+      region: regionsTable,
+      subregion: subregionsTable,
+      language: languagesTable,
+      currency: currenciesTable,
+    })
     .from(countriesTable)
+    .orderBy(orderByQuery)
     .leftJoin(regionsTable, eq(countriesTable.regionId, regionsTable.id))
     .leftJoin(
       subregionsTable,
@@ -266,13 +375,85 @@ export async function getCountries({
         sql,
       }),
     )
-    .orderBy(buildCountrySort(sort))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
     .execute();
 
+  // Track original order of countries
+  const countryOrder: number[] = [];
+  const seenCountryIds = new Set<number>();
+
+  // First pass to capture the order
+  for (const row of data) {
+    if (!seenCountryIds.has(row.id)) {
+      countryOrder.push(row.id);
+      seenCountryIds.add(row.id);
+    }
+  }
+
+  // Your existing reduce function
+  const countriesMap = data.reduce<
+    Record<
+      number,
+      {
+        country: Country;
+        languages: Language[];
+        currencies: Currency[];
+        region: Region | null;
+        subregion: Subregion | null;
+      }
+    >
+  >((acc, row) => {
+    const countryId = row.id;
+
+    if (!acc[countryId]) {
+      acc[countryId] = {
+        country: row,
+        languages: [],
+        currencies: [],
+        region: row.region,
+        subregion: row.subregion,
+      };
+    }
+
+    // Add language if needed
+    const language = row.language;
+    if (
+      language &&
+      language.id &&
+      !acc[countryId].languages.some((l) => l.id === language.id)
+    ) {
+      acc[countryId].languages.push(language);
+    }
+
+    // Add currency if needed
+    if (
+      row.currency &&
+      row.currency.id &&
+      !acc[countryId].currencies.some((c) => c.id === row.currency!.id)
+    ) {
+      acc[countryId].currencies.push(row.currency);
+    }
+
+    return acc;
+  }, {});
+
+  // CRITICAL CHANGE: Use the tracked order instead of Object.values()
+  const orderedCountries = countryOrder.map((id) => countriesMap[id]);
+
+  // Format the data using the ordered array
+  const formattedData = orderedCountries.map(
+    ({ country, region, subregion, languages, currencies }) =>
+      formattedCountryResponse(
+        country,
+        region,
+        subregion,
+        languages,
+        currencies,
+      ),
+  );
   return {
-    data,
+    data: formattedData,
     meta: {
       total,
       page,

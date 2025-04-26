@@ -14,16 +14,18 @@ export interface CountryName {
 export interface CountryApiResponse {
   name: {
     common: string;
-    official: string;
   };
   cca3: string;
   region: string;
   subregion: string;
   languages?: Record<string, string>;
-  currencies?: Record<string, {
-    name: string;
-    symbol?: string;
-  }>;
+  currencies?: Record<
+    string,
+    {
+      name: string;
+      symbol?: string;
+    }
+  >;
   population: number;
   flags: {
     png: string;
@@ -48,15 +50,12 @@ export interface CountryInput
   subregion: SubregionInput['name'];
 }
 
-
-export type CountryEntity =
-  | (Country & {
-      region: Region | null;
-      subregion: Subregion | null;
-      languages: Array<{ language: Language }>;
-      currencies: Array<{ currency: Currency }>;
-    })
-}
+export type CountryEntity = Country & {
+  region: Region | null;
+  subregion: Subregion | null;
+  languages: Array<{ language: Language }>;
+  currencies: Array<{ currency: Currency }>;
+};
 
 export interface CountryResponse
   extends Omit<Country, 'regionId' | 'subregionId'> {

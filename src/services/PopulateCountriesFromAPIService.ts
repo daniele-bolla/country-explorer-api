@@ -1,7 +1,6 @@
 import { adapterApiToCountryInput } from '../adapters/adapterAPI';
 import { db } from '../db';
 import { fetchCountriesFromApi } from './CountriesApi';
-import { clearDatabase } from '../testutils/clearDatabase';
 import { findOrCreateRegion } from './RegionsService';
 import { bulkCreateSubregions } from './SubRegionsService';
 import { bulkCreateLanguages } from './LanguagesService';
@@ -11,8 +10,9 @@ import {
   bulkCreateCurrencyRelations,
   bulkCreateLanguageRelations,
 } from './CountriesRelationsService';
+import { CountryApiResponse } from '../types/countryModel';
 
-export async function importCountriesFromApi() {
+export async function bulkCreateCountries(countries: CountryApiResponse[]) {
   const stats = {
     startTime: Date.now(),
     counts: {
@@ -24,11 +24,6 @@ export async function importCountriesFromApi() {
       relations: 0,
     },
   };
-
-  console.log('🚀 Starting country import from API...');
-
-  const countries = await fetchCountriesFromApi();
-  console.log(`📥 Fetched ${countries.length} countries from API`);
 
   const adaptedCountries = countries.map(adapterApiToCountryInput);
 
@@ -63,9 +58,6 @@ export async function importCountriesFromApi() {
     (count, { subregions }) => count + subregions.length,
     0,
   );
-
-  // await clearDatabase();
-  // console.log('🧹 Database cleared');
 
   const regionIds = new Map<string, number>();
   try {
@@ -177,4 +169,12 @@ export async function importCountriesFromApi() {
     console.error(`❌ Import failed after ${duration}s:`, error);
     return { success: false, error };
   }
+}
+
+export async function importCountriesFromApi() {
+  console.log('🚀 Starting country import from API...');
+
+  const countries = await fetchCountriesFromApi();
+  console.log(`📥 Fetched ${countries.length} countries from API`);
+  await bulkCreateCountries(countries);
 }

@@ -192,8 +192,7 @@ Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes
 
 ## Tests
 
-We have unit tests (mocked) and integration tests. The DB is actually shared between development and testing mode. On each run the DB is ckeared, once the webserver start again it will import new data eventually.
-I’ll isolate them with dedicated test databases and separate CI workflows.
+Unit tests (mocked) run on separate DB.
 
 ## Caching
 

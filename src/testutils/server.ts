@@ -2,7 +2,7 @@ import Hapi, { Server } from '@hapi/hapi';
 import routes from '../routes';
 
 const server = Hapi.server({
-  port: 3002,
+  port: 3000,
   host: 'localhost',
 });
 

@@ -14,9 +14,6 @@ export async function fetchCountriesFromApi(): Promise<CountryApiResponse[]> {
     'languages',
     'currencies',
   ];
-  // const { data } = await ApiService.get(
-  //   `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
-  // );
   const { data } = await ApiService.get(
     `${config.api.countriesBaseUrl}/all?fields=${wtihFields.join(',')}`,
   );

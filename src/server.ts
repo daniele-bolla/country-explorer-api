@@ -8,9 +8,11 @@ import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
 import { importCountriesFromApi } from './services/ImportCountriesService';
+import { clearDatabase } from './testutils/clearDatabase';
 
 export const init = async (serverPort?: number) => {
   const server = Hapi.server({
+    debug: { request: ['error'] },
     port: serverPort || config.server.port,
     host: config.server.host,
     routes: {
@@ -37,6 +39,7 @@ export const init = async (serverPort?: number) => {
       options: swaggerOptions,
     },
   ]);
+  server.log(['test', 'error'], 'Test event');
 
   await routes(server);
   try {

@@ -1,9 +1,10 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
   postgres:
     image: postgres:15
-    container_name: countries-database
+    container_name: countries-db
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -14,5 +15,20 @@ services:
       - '${DB_PORT:-5432}:5432'
     restart: unless-stopped
 
+  # Test database - runs on a different port
+  postgres-test:
+    image: postgres:15
+    container_name: countries-db-test
+    environment:
+      POSTGRES_USER: ${TEST_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${TEST_DB_NAME:-countries_test_db}
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    ports:
+      - '${TEST_DB_PORT:-5433}:5432'
+    restart: unless-stopped
+
 volumes:
   postgres-data:
+  postgres-test-data:

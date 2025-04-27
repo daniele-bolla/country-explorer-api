@@ -50,10 +50,17 @@ Many-to-many relationships are implemented through junction tables:
 
 ## Setup
 
-1. Start the database:
+1. Start DBs
 
 ```bash
 docker-compose up -d
+```
+
+2. Set up DBs:
+
+```bash
+npm run db:push
+npm run db:push:test
 ```
 
 2. Start the webserver:
@@ -187,3 +194,7 @@ Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes
 
 We have unit tests (mocked) and integration tests. The DB is actually shared between development and testing mode. On each run the DB is ckeared, once the webserver start again it will import new data eventually.
 I’ll isolate them with dedicated test databases and separate CI workflows.
+
+## Caching
+
+Caching is not still implmented but aiming to use Redis and Catbox.

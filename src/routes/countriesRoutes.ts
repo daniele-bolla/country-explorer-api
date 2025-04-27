@@ -34,9 +34,9 @@ export default {
             ...gettAllCountriesValidation,
             ...errorValidationHandler,
           },
-          response: {
-            schema: countryListResponseSchema,
-          },
+          // response: {
+          //   schema: countryListResponseSchema,
+          // },
           description: 'Get all countries',
           tags: ['api'],
         },
@@ -50,9 +50,9 @@ export default {
             ...createCountryValidation,
             ...errorValidationHandler,
           },
-          response: {
-            schema: countryResponseSchema,
-          },
+          // response: {
+          //   schema: countryResponseSchema,
+          // },
           description: 'Create a countries',
           tags: ['api'],
         },
@@ -66,9 +66,9 @@ export default {
             ...updateCountryValidation,
             ...errorValidationHandler,
           },
-          response: {
-            schema: countryResponseSchema,
-          },
+          // response: {
+          //   schema: countryResponseSchema,
+          // },
           description: 'Update a country',
           tags: ['api'],
         },
@@ -83,9 +83,9 @@ export default {
             ...errorValidationHandler,
           },
           description: 'Delete a country',
-          response: {
-            schema: deleteResponseSchema,
-          },
+          // response: {
+          //   schema: deleteResponseSchema,
+          // },
           tags: ['api'],
         },
       },
@@ -98,9 +98,9 @@ export default {
             ...getCountryByIdValidation,
             ...errorValidationHandler,
           },
-          response: {
-            schema: countryResponseSchema,
-          },
+          // response: {
+          //   schema: countryResponseSchema,
+          // },
           description: 'Get a country',
           tags: ['api'],
         },

@@ -52,9 +52,9 @@ Many-to-many relationships are implemented through junction tables:
 
 1. Start the database:
 
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+docker-compose up -d
+```
 
 2. Start the webserver:
 
@@ -65,7 +65,7 @@ npm run dev
 3. Test:
 
 ```bash
-npm run dev
+npm run test
 ```
 
 # Swagger
@@ -78,13 +78,13 @@ I have implemented a simple Country Explorer API for this task. The application 
 
 ## Data Import Approach
 
-Rather than creating individual API calls for each country, I implemented a bulk creation process that imports all countries at once from the **all countries** endpoint. The import process:
+Rather than creating individual API calls for each country, I implemented a bulk creation that imports all countries at once from the **all countries** endpoint:
 
 1. **Fetches data** from restcountries.com
-2. **Transforms** the data to match our database schema, selecting only the fields we need
-3. **Performs a batch insert** into our database
+2. **Transforms** the data to match the database schema, selecting only the fields we need
+3. **Performs a batch insert** into the database
 
-> The bulk import automatically runs when the database is empty, populating it with all country data.  
+> The bulk import automatically runs when the database is empty, populating it with all countries.  
 > I considered adding a dedicated import script (e.g., `npm run import`) but prioritized other features instead.
 
 ## API Design Decisions
@@ -95,7 +95,7 @@ I chose to implement a single, powerful `GET /api/countries` endpoint with compr
 - **Sorting** by various fields in ascending/descending order
 - **Pagination** with customizable page size
 
-The main advantage of this approach is a consistent interface for all country queries. However, this led to more complex code, particularly around joins and filtering.
+However, this led to more complex code, particularly around joins and filtering.
 
 ## Implementation Challenges
 
@@ -112,9 +112,9 @@ I initially hoped to use Drizzle’s `findMany` feature with relationship querie
 I could have opted for splitting the API into multiple dedicated endpoints:
 
 ```http
-GET /api/regions/{name}/countries
-GET /api/languages/{name}/countries
-GET /api/currencies/{name}/countries
+GET /api/countries/byregion/{name}/?{filtering&sorting}
+GET /api/countries/bylanguage/{name}/?{filtering&sorting}
+GET /api/countries/bycurrency/{name}/?{filtering&sorting}
 ```
 
 ## Filtering and Sorting
@@ -179,12 +179,11 @@ GET /api/countries?page=2
 
 GET /api/countries?page=1&pageSize=10
 
+## Error Handling and Logging
+
+Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes.ts`. I’ll add a global error handler and a centralized Pino logger in `server.ts` and the API service.
+
 ## Tests
 
-Tests are a mix unit and integration tests, although the data is mocked and has a separate `server.ts`.
-
-Tests are at the moment runnning on the same evnrionment and database. ( pallnign to separate this)
-
-```
-
-```
+We have unit tests (mocked) and integration tests. The DB is actually shared between development and testing mode. On each run the DB is ckeared, once the webserver start again it will import new data eventually.
+I’ll isolate them with dedicated test databases and separate CI workflows.

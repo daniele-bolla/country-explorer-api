@@ -66,38 +66,39 @@ Many-to-many relationships are implemented through junction tables:
 ## Setup
 
 1. Start the database:
+
    ```bash
    docker-compose up -d
-   Apply schema:
    ```
 
-BASH
+2. Start the webserver:
 
-npm run db:push
-Start the server:
-
-BASH
-
+```bash
 npm run dev
-API Usage
-BASH
+```
+
+3. Test:
+
+```bash
+npm run dev
+```
 
 # Get all countries
 
-GET /api/countries
+`GET /api/countries`
 
 # Filter by population
 
-GET /api/countries?populationGte=10000000
+`GET /api/countries?populationGte=10000000`
 
 # Sort by name
 
-GET /api/countries?sortField=name&sortDirection=desc
-Testing
-BASH
+`GET /api/countries?sortField=name&sortDirection=desc`
 
-npm test
-Tests use a separate database (port 5433) that's automatically set up with the schema.
+# Get country by id
 
-License
-MIT
+`GET /api/countries/{id}`
+
+# Create country
+
+`POST /api/countries/{id}`

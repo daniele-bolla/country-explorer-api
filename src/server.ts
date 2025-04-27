@@ -1,7 +1,7 @@
 import Hapi from '@hapi/hapi';
-// import Inert from '@hapi/inert';
-// import Vision from '@hapi/vision';
-// import HapiSwagger from '@hapi/swagger';
+import Inert from '@hapi/inert';
+import Vision from '@hapi/vision';
+import HapiSwagger from 'hapi-swagger';
 import config from './config';
 import routes from './routes/index';
 import { db } from './db';
@@ -20,22 +20,23 @@ export const init = async (serverPort?: number) => {
     },
   });
 
-  // Register Swagger documentation
-  //   const swaggerOptions = {
-  //     info: {
-  //       title: 'Country Explorer API Documentation',
-  //       version: '1.0.0',
-  //     },
-  //   };
+  const swaggerOptions = {
+    info: {
+      title: 'Country Explorer API Documentation',
+      version: '1.0.0',
+    },
+    grouping: 'tags',
+    sortEndpoints: 'ordered',
+  };
 
-  //   await server.register([
-  //     Inert,
-  //     Vision,
-  //     {
-  //       plugin: HapiSwagger,
-  //       options: swaggerOptions,
-  //     },
-  //   ]);
+  await server.register([
+    Inert,
+    Vision,
+    {
+      plugin: HapiSwagger,
+      options: swaggerOptions,
+    },
+  ]);
 
   await routes(server);
   try {

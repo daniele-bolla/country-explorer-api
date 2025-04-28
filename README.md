@@ -194,6 +194,13 @@ Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes
 
 Unit tests (mocked) run on separate DB.
 
+# Check DBs
+
+```bash
+npm run db:show
+npm run db:show:test
+```
+
 ## Caching
 
 Caching is not still implmented but aiming to use Redis and Catbox.

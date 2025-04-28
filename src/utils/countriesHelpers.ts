@@ -24,15 +24,15 @@ import { CountryFilter } from '../types/countryFilters';
 
 export function formattedCountryResponse(
   country: Country,
-  region: Partial<Region> | null,
-  subregion: Partial<SubregionInput> | null,
-  languages: Language[],
-  currencies: Currency[],
+  region: Region | null,
+  subregion: Subregion | null,
+  languages: Language[] | null,
+  currencies: Currency[] | null,
 ): CountryResponse {
   return {
     ...country,
-    region: region?.name,
-    subregion: subregion?.name,
+    region: region,
+    subregion: subregion,
     languages,
     currencies,
   };

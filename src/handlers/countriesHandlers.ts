@@ -58,7 +58,6 @@ export async function getAllCountriesHandler(
 
     return h.response(countries).code(200);
   } catch (error) {
-    console.error(error);
     return errorResponseHandler(error as Error);
   }
 }
@@ -108,7 +107,6 @@ export async function deleteCountryHandler(
       .response({ message: 'Country deleted successfully', data: result })
       .code(200);
   } catch (error: unknown) {
-    console.error(error);
     return errorResponseHandler(error as Error);
   }
 }

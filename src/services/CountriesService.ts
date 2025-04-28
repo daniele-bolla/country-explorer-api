@@ -322,7 +322,7 @@ export async function updateCountry(
     }
 
     let region: Region | null = null;
-    let subregion: Region | null = null;
+    let subregion: Subregion | null = null;
 
     let languages: Language[] = [];
     let currencies: Currency[] = [];

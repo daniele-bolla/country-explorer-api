@@ -42,6 +42,7 @@ export const init = async (serverPort?: number) => {
   server.log(['test', 'error'], 'Test event');
 
   await routes(server);
+  // await clearDatabase()
   try {
     const [result] = await db.select({ count: count() }).from(countriesTable);
 

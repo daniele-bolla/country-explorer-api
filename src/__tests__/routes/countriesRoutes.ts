@@ -64,7 +64,7 @@ describe('Country Routes', () => {
 
       expect(result.data.length).toBe(3);
       result.data.forEach((country: CountryResponse) => {
-        expect(country.region).toBe('Europe');
+        expect(country.region!.name).toBe('Europe');
       });
     });
 
@@ -84,7 +84,7 @@ describe('Country Routes', () => {
       expect(result.data.length).toBeGreaterThan(0);
       result.data.forEach((country: CountryResponse) => {
         expect(
-          country.languages.every((l) => l.name == 'English'),
+          country.languages!.every((l) => l.name == 'English'),
         ).toBeTruthy();
       });
     });
@@ -106,7 +106,7 @@ describe('Country Routes', () => {
 
       expect(result.data.length).toBe(countriesWithEuro.length);
       result.data.forEach((country: CountryResponse) => {
-        expect(country.currencies.every((c) => c.code == 'EUR')).toBeTruthy();
+        expect(country.currencies!.every((c) => c.code == 'EUR')).toBeTruthy();
       });
     });
 
@@ -196,6 +196,7 @@ describe('Country Routes', () => {
       expect(result.data[0].name).toBe('Germany');
     });
   });
+
   describe('POST /api/countries', () => {
     it('should create a new country with valid input', async () => {
       const response = await server.inject({
@@ -211,8 +212,8 @@ describe('Country Routes', () => {
       expect(responseJson).toHaveProperty('id');
       expect(responseJson).toHaveProperty('createdAt');
       expect(responseJson).toHaveProperty('updatedAt');
-      expect(responseJson.region).toBe(validCountryInput.region);
-      expect(responseJson.subregion).toBe(validCountryInput.subregion);
+      expect(responseJson.region.name).toBe(validCountryInput.region);
+      expect(responseJson.subregion.name).toBe(validCountryInput.subregion);
       expect(responseJson.languages).toHaveLength(1);
       expect(responseJson.currencies).toHaveLength(1);
     });
@@ -332,7 +333,7 @@ describe('Country Routes', () => {
       expect(updated.id).toBe(countryId);
       expect(updated.name).toBe('Updated Name');
       expect(updated.population).toBe(5000000);
-      expect(updated.region).toBe('New Region');
+      expect(updated.region.name).toBe('New Region');
 
       // Fields not included in the update should remain unchanged
       expect(updated.cca3).toBe(validCountryInput.cca3);

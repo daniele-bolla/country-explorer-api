@@ -16,6 +16,7 @@ import {
   deleteResponseSchema,
   getCountryByIdValidation,
   gettAllCountriesValidation,
+  updataeCountryResponseSchema,
   updateCountryValidation,
 } from '../validations/countiryValidation';
 import { errorValidationHandler } from '../handlers/errorValidationHandler';
@@ -51,9 +52,10 @@ export default {
             ...createCountryValidation,
             ...errorValidationHandler,
           },
-          // response: {
-          //   schema: countryResponseSchema,
-          // },
+          response: {
+            schema: countryResponseSchema,
+            ...errorValidationHandler,
+          },
           description: 'Create a countries',
           tags: ['api'],
         },
@@ -67,9 +69,10 @@ export default {
             ...updateCountryValidation,
             ...errorValidationHandler,
           },
-          // response: {
-          //   schema: countryResponseSchema,
-          // },
+          response: {
+            schema: updataeCountryResponseSchema,
+            ...errorValidationHandler,
+          },
           description: 'Update a country',
           tags: ['api'],
         },
@@ -84,9 +87,10 @@ export default {
             ...errorValidationHandler,
           },
           description: 'Delete a country',
-          // response: {
-          //   schema: deleteResponseSchema,
-          // },
+          response: {
+            schema: deleteResponseSchema,
+            ...errorValidationHandler,
+          },
           tags: ['api'],
         },
       },
@@ -101,6 +105,7 @@ export default {
           },
           response: {
             schema: countryResponseSchema,
+            ...errorValidationHandler,
           },
           description: 'Get a country',
           tags: ['api'],

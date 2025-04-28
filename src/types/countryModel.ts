@@ -57,12 +57,11 @@ export type CountryEntity = Country & {
   currencies: Array<{ currency: Currency }>;
 };
 
-export interface CountryResponse
-  extends Omit<Country, 'regionId' | 'subregionId'> {
-  languages: Language[];
-  currencies: Currency[];
-  region?: RegionInput['name'];
-  subregion?: SubregionInput['name'];
+export interface CountryResponse extends Country {
+  languages: Language[] | null;
+  currencies: Currency[] | null;
+  region: Region | null;
+  subregion: Subregion | null;
 }
 
 export interface UpdateCountryInput {

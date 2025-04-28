@@ -103,50 +103,54 @@ export const updateCountryValidation = {
 /**
  * Responses
  */
+const code = Joi.string();
+const createdAt = Joi.date().iso();
+const updatedAt = Joi.date().iso();
 export const languageSchema = Joi.object({
-  id: Joi.number().integer().required(),
-  code: Joi.string().required(),
-  name: Joi.string().required(),
-  createdAt: Joi.date().iso().required(),
-  updatedAt: Joi.date().iso().required(),
-}).label('Language');
+  code,
+  name,
+  createdAt,
+  updatedAt,
+});
 
-export const countryLanguageSchema = Joi.object({
-  countryId: Joi.number().integer().required(),
-  languageId: Joi.number().integer().required(),
-  language: languageSchema.required(),
-}).label('CountryLanguage');
+export const currencychema = Joi.object({
+  code,
+  name,
+  createdAt,
+  updatedAt,
+});
 
 export const regionSchema = Joi.object({
-  id: Joi.number().integer().required(),
-  name: Joi.string().required(),
-  createdAt: Joi.date().iso().required(),
-  updatedAt: Joi.date().iso().required(),
+  id,
+  name,
+  createdAt,
+  updatedAt,
 });
 
 export const subregionSchema = Joi.object({
-  id: Joi.number().integer().required(),
-  name: Joi.string().required(),
-  regionId: Joi.number().integer().required(),
-  createdAt: Joi.date().iso().required(),
-  updatedAt: Joi.date().iso().required(),
+  id,
+  name,
+  // regionId: Joi.number().integer(),
+  createdAt,
+  updatedAt,
 });
 
 export const countrySchema = Joi.object({
-  id: Joi.number().integer(),
-  name: Joi.string(),
-  cca3: Joi.string().length(3),
-  capital: Joi.array().items(Joi.string()),
-  regionId: Joi.number().integer(),
-  subregionId: Joi.number().integer(),
-  population: Joi.number().integer().min(0),
-  flagSvg: Joi.string().uri(),
-  flagPng: Joi.string().uri(),
-  createdAt: Joi.date().iso(),
-  updatedAt: Joi.date().iso(),
-  region: regionSchema,
-  subregion: subregionSchema,
-  languages: Joi.array().items(countryLanguageSchema),
+  id,
+  name,
+  cca3,
+  capital,
+  // regionId: Joi.number().integer(),
+  // subregionId: Joi.number().integer(),
+  population,
+  flagSvg,
+  flagPng,
+  createdAt,
+  updatedAt,
+  region: regionSchema.allow(null),
+  subregion: subregionSchema.allow(null),
+  languages: Joi.array().items(languageSchema).allow(null),
+  currenciess: Joi.array().items(currencychema).allow(null),
 });
 
 export const countryResponseSchema = Joi.object({
@@ -154,28 +158,28 @@ export const countryResponseSchema = Joi.object({
 });
 
 export const updataeCountryResponseSchema = Joi.object({
-  data: countrySchema,
+  data: countrySchema.optional(),
 });
 
 export const countryListResponseSchema = Joi.object({
-  data: Joi.array().items(countrySchema).required(),
+  data: Joi.array().items(countrySchema),
   meta: Joi.object({
-    page: Joi.number().integer().min(1).required(),
-    pageCount: Joi.number().integer().min(1).required(),
-    pageSize: Joi.number().integer().min(1).required(),
-    total: Joi.number().integer().min(0).required(),
-  }).required(),
+    page,
+    pageCount: Joi.number().integer().min(1),
+    pageSize: Joi.number().integer().min(1),
+    total: Joi.number().integer().min(0),
+  }),
 });
 
 const deleteResultSchema = Joi.object({
   country: Joi.object({
-    id: Joi.number().integer().required(),
-    name: Joi.string().required(),
+    id: Joi.number().integer(),
+    name: Joi.string(),
   }).optional(),
   cleanup: Joi.object({
-    regions: Joi.number().integer().required(),
-    subregions: Joi.number().integer().required(),
-  }).required(),
+    regions: Joi.number().integer(),
+    subregions: Joi.number().integer(),
+  }),
 });
 
 export const deleteResponseSchema = Joi.object({

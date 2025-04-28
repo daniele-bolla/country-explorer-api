@@ -210,3 +210,7 @@ Caching is not still implmented but aiming to use Redis and Catbox.
 ### Switcing from Joy to Zod
 
 Even if Hapi sudjest Joy i feel Zod has better features ( infer typescript types from schema )
+
+### Install warning
+
+Don't run `npm audit fix --force` it will download a version of drizzle-kit wich is outdated.

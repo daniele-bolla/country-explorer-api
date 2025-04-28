@@ -8,11 +8,11 @@ import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
 import { importCountriesFromApi } from './services/ImportCountriesService';
-import { clearDatabase } from './testutils/clearDatabase';
+import HapiPino from 'hapi-pino';
 
 export const init = async (serverPort?: number) => {
   const server = Hapi.server({
-    debug: { request: ['error'] },
+    debug: false,
     port: serverPort || config.server.port,
     host: config.server.host,
     routes: {
@@ -34,15 +34,14 @@ export const init = async (serverPort?: number) => {
   await server.register([
     Inert,
     Vision,
+    HapiPino,
     {
       plugin: HapiSwagger,
       options: swaggerOptions,
     },
   ]);
-  server.log(['test', 'error'], 'Test event');
 
   await routes(server);
-  // await clearDatabase()
   try {
     const [result] = await db.select({ count: count() }).from(countriesTable);
 

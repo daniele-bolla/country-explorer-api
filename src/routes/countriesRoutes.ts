@@ -27,7 +27,7 @@ export default {
     server.route([
       {
         method: 'GET',
-        path: '/api/countries',
+        path: '/countries',
         handler: getAllCountriesHandler,
 
         options: {
@@ -45,7 +45,7 @@ export default {
       },
       {
         method: 'POST',
-        path: '/api/countries',
+        path: '/countries',
         handler: createCountryHandler,
         options: {
           validate: {
@@ -62,7 +62,7 @@ export default {
       },
       {
         method: 'PATCH',
-        path: '/api/countries/{id}',
+        path: '/countries/{id}',
         handler: updateCountryHandler,
         options: {
           validate: {
@@ -79,7 +79,7 @@ export default {
       },
       {
         method: 'DELETE',
-        path: '/api/countries/{id}',
+        path: '/countries/{id}',
         handler: deleteCountryHandler,
         options: {
           validate: {
@@ -96,7 +96,7 @@ export default {
       },
       {
         method: 'GET',
-        path: '/api/countries/{id}',
+        path: '/countries/{id}',
         handler: getCountryHandler,
         options: {
           validate: {

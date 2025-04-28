@@ -1,5 +1,6 @@
 import Hapi, { Server } from '@hapi/hapi';
 import routes from '../routes';
+import { devLog } from '../utils/devLog';
 
 const server = Hapi.server({
   port: 3000,
@@ -20,6 +21,6 @@ export const stopServer = async (server: Server): Promise<void> => {
 
 export const startServer = async (server: Server): Promise<Server> => {
   await server.start();
-  console.log(`Test Server running at: ${server.info.uri}`);
+  devLog(`Test Server running at: ${server.info.uri}`);
   return server;
 };

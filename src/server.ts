@@ -1,17 +1,19 @@
-import Hapi from '@hapi/hapi';
+import Hapi, { Server } from '@hapi/hapi';
 import Inert from '@hapi/inert';
 import Vision from '@hapi/vision';
 import HapiSwagger from 'hapi-swagger';
-import config from './config';
+import config, { isProd } from './config';
 import routes from './routes/index';
 import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
 import { importCountriesFromApi } from './services/ImportCountriesService';
 import HapiPino from 'hapi-pino';
+import { devLog } from './utils/devLog';
 
+export let server: Server;
 export const init = async (serverPort?: number) => {
-  const server = Hapi.server({
+  server = Hapi.server({
     debug: false,
     port: serverPort || config.server.port,
     host: config.server.host,
@@ -19,6 +21,14 @@ export const init = async (serverPort?: number) => {
       cors: {
         origin: ['*'],
       },
+    },
+  });
+  await server.register({
+    plugin: HapiPino,
+    options: {
+      level: isProd ? 'info' : 'debug',
+      redact: ['req.headers.authorization'],
+      logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
     },
   });
 
@@ -34,7 +44,6 @@ export const init = async (serverPort?: number) => {
   await server.register([
     Inert,
     Vision,
-    HapiPino,
     {
       plugin: HapiSwagger,
       options: swaggerOptions,
@@ -46,18 +55,16 @@ export const init = async (serverPort?: number) => {
     const [result] = await db.select({ count: count() }).from(countriesTable);
 
     if (result.count === 0) {
-      console.log('Database is empty. Loading initial country data...');
+      devLog('Database is empty. Loading initial country data...');
       await importCountriesFromApi();
     } else {
-      console.log(`Database already contains ${result.count} countries.`);
+      devLog(`Database already contains ${result.count} countries.`);
     }
   } catch (error) {
-    console.error('Error checking/loading initial data:', error);
+    server.logger.error('Error checking/loading initial data:', error);
   }
 
   await server.start();
-  console.log(`Server running on ${server.info.uri}`);
-  console.log(`Documentation available at ${server.info.uri}/documentation`);
 
   return server;
 };

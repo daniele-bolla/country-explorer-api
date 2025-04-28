@@ -1,22 +1,15 @@
 import Boom from '@hapi/boom';
+import { Request } from '@hapi/hapi';
 
-export function errorResponseHandler(error: Error) {
+export function errorResponseHandler(error: Error, request: Request) {
   if (error instanceof Error) {
     if (error.message.includes('not found')) {
       return Boom.notFound(error.message);
     }
     if (error.message.includes('already exists')) {
-      return Boom.conflict(error.message);
-    }
+      // request.logger.error('An unexpected error occurred', error);
 
-    if (
-      error.message.includes('unique constraint') ||
-      error.message.includes('duplicate key')
-    ) {
-      if (error.message.includes('cca3')) {
-        return Boom.conflict('A country with this code already exists');
-      }
-      return Boom.conflict('A duplicate value was found');
+      return Boom.conflict(error.message);
     }
 
     if (
@@ -39,6 +32,7 @@ export function errorResponseHandler(error: Error) {
       );
     }
   }
+  // request.logger.error('An unexpected error occurred', error);
 
   return Boom.badImplementation('An unexpected error occurred', error);
 }

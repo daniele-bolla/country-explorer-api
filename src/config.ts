@@ -3,12 +3,12 @@ import 'dotenv/config';
 // src/config/index.js
 const environments = ['development', 'test', 'production'];
 const env = process.env.NODE_ENV || 'development';
-
 if (!environments.includes(env)) {
   console.warn(
     `Warning: Invalid NODE_ENV '${env}'. Defaulting to 'development'`,
   );
 }
+export const isProd = env === 'production';
 
 // Base configuration
 const baseConfig = {

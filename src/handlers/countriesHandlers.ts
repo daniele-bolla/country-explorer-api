@@ -58,7 +58,7 @@ export async function getAllCountriesHandler(
 
     return h.response(countries).code(200);
   } catch (error) {
-    return errorResponseHandler(error as Error);
+    return errorResponseHandler(error as Error, request);
   }
 }
 
@@ -71,7 +71,7 @@ export async function createCountryHandler(
     const result = await createCountry(countryData);
     return h.response(result).code(201);
   } catch (error: unknown) {
-    return errorResponseHandler(error as Error);
+    return errorResponseHandler(error as Error, request);
   }
 }
 
@@ -92,7 +92,7 @@ export async function updateCountryHandler(
       })
       .code(200);
   } catch (error: unknown) {
-    return errorResponseHandler(error as Error);
+    return errorResponseHandler(error as Error, request);
   }
 }
 
@@ -107,7 +107,7 @@ export async function deleteCountryHandler(
       .response({ message: 'Country deleted successfully', data: result })
       .code(200);
   } catch (error: unknown) {
-    return errorResponseHandler(error as Error);
+    return errorResponseHandler(error as Error, request);
   }
 }
 
@@ -119,6 +119,6 @@ export async function getCountryHandler(request: Request, h: ResponseToolkit) {
       .response({ message: 'Country retrieved successfully', data: result })
       .code(200);
   } catch (error: unknown) {
-    return errorResponseHandler(error as Error);
+    return errorResponseHandler(error as Error, request);
   }
 }

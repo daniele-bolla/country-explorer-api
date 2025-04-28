@@ -8,10 +8,12 @@
     "lint:fix": "eslint 'src//*.{ts,tsx}' --fix",
     "dev": "cross-env NODE_ENV=development npx tsx watch src/server.ts",
     "db:push": "npx drizzle-kit push",
+    "db:push:test": "cross-env NODE_ENV=test npx drizzle-kit push",
+    "db:show": "npx drizzle-kit studio",
+    "db:show:test": "cross-env NODE_ENV=test npx drizzle-kit studio",
     "test": "cross-env NODE_ENV=test jest",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
-    "test:coverage": "cross-env NODE_ENV=test jest --coverage",
-    "db:push:test": "cross-env NODE_ENV=test npx drizzle-kit push"
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage"
   },
   "keywords": [],
   "author": "daniele-bolla <bolladaniele@gmail.com> (https://daniele-bolla.github.io/)",
@@ -24,7 +26,7 @@
     "@hapi/vision": "^7.0.3",
     "axios": "^1.8.4",
     "dotenv": "^16.5.0",
-    "drizzle-orm": "^0.32.2",
+    "drizzle-orm": "^0.43.1",
     "hapi-pino": "^12.1.0",
     "hapi-swagger": "^17.3.2",
     "joi": "^17.13.3",

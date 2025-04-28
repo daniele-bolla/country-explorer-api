@@ -122,7 +122,7 @@ export const regionSchema = Joi.object({
   name: Joi.string().required(),
   createdAt: Joi.date().iso().required(),
   updatedAt: Joi.date().iso().required(),
-}).label('Region');
+});
 
 export const subregionSchema = Joi.object({
   id: Joi.number().integer().required(),
@@ -130,28 +130,32 @@ export const subregionSchema = Joi.object({
   regionId: Joi.number().integer().required(),
   createdAt: Joi.date().iso().required(),
   updatedAt: Joi.date().iso().required(),
-}).label('Subregion');
+});
 
 export const countrySchema = Joi.object({
-  id: Joi.number().integer().required(),
-  name: Joi.string().required(),
-  cca3: Joi.string().length(3).required(),
-  capital: Joi.array().items(Joi.string()).required(),
-  regionId: Joi.number().integer().required(),
-  subregionId: Joi.number().integer().required(),
-  population: Joi.number().integer().min(0).required(),
-  flagSvg: Joi.string().uri().required(),
-  flagPng: Joi.string().uri().required(),
-  createdAt: Joi.date().iso().required(),
-  updatedAt: Joi.date().iso().required(),
-  region: regionSchema.required(),
-  subregion: subregionSchema.required(),
-  languages: Joi.array().items(countryLanguageSchema).required(),
-}).label('Country');
+  id: Joi.number().integer(),
+  name: Joi.string(),
+  cca3: Joi.string().length(3),
+  capital: Joi.array().items(Joi.string()),
+  regionId: Joi.number().integer(),
+  subregionId: Joi.number().integer(),
+  population: Joi.number().integer().min(0),
+  flagSvg: Joi.string().uri(),
+  flagPng: Joi.string().uri(),
+  createdAt: Joi.date().iso(),
+  updatedAt: Joi.date().iso(),
+  region: regionSchema,
+  subregion: subregionSchema,
+  languages: Joi.array().items(countryLanguageSchema),
+});
 
 export const countryResponseSchema = Joi.object({
   data: countrySchema,
-}).label('CountryResponse');
+});
+
+export const updataeCountryResponseSchema = Joi.object({
+  data: countrySchema,
+});
 
 export const countryListResponseSchema = Joi.object({
   data: Joi.array().items(countrySchema).required(),

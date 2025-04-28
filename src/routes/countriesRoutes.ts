@@ -34,9 +34,10 @@ export default {
             ...gettAllCountriesValidation,
             ...errorValidationHandler,
           },
-          // response: {
-          //   schema: countryListResponseSchema,
-          // },
+          response: {
+            schema: countryListResponseSchema,
+            ...errorValidationHandler,
+          },
           description: 'Get all countries',
           tags: ['api'],
         },
@@ -98,9 +99,9 @@ export default {
             ...getCountryByIdValidation,
             ...errorValidationHandler,
           },
-          // response: {
-          //   schema: countryResponseSchema,
-          // },
+          response: {
+            schema: countryResponseSchema,
+          },
           description: 'Get a country',
           tags: ['api'],
         },

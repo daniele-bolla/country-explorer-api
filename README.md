@@ -186,10 +186,6 @@ GET /api/countries?page=2
 
 GET /api/countries?page=1&pageSize=10
 
-## Error Handling and Logging
-
-Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes.ts`. I’ll add a global error handler and a centralized Pino logger in `server.ts` and the API service.
-
 ## Tests
 
 Unit tests (mocked) run on separate DB.
@@ -201,6 +197,16 @@ npm run db:show
 npm run db:show:test
 ```
 
-## Caching
+## Further developments
+
+### Error Handling and Logging
+
+Routes use Boom for errors and Pino for logs, currently only in `countriesRoutes.ts`. I’ll add a global error handler and a centralized Pino logger in `server.ts` and the API service.
+
+### Caching
 
 Caching is not still implmented but aiming to use Redis and Catbox.
+
+### Switcing from Joy to Zod
+
+Even if Hapi sudjest Joy i feel Zod has better features ( infer typescript types from schema )

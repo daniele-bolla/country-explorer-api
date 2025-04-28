@@ -12,6 +12,8 @@ import {
 } from './CountriesRelationsService';
 import { CountryApiResponse } from '../types/countryModel';
 import { devLog } from '../utils/devLog';
+import { count } from 'drizzle-orm';
+import { countriesTable } from '../db/schema';
 
 export async function bulkCreateCountries(countries: CountryApiResponse[]) {
   const stats = {
@@ -178,4 +180,15 @@ export async function importCountriesFromApi() {
   const countries = await fetchCountriesFromApi();
   devLog(`📥 Fetched ${countries.length} countries from API`);
   await bulkCreateCountries(countries);
+}
+
+export async function importCountriesIfEmptyDB() {
+  const [result] = await db.select({ count: count() }).from(countriesTable);
+
+  if (result.count === 0) {
+    devLog('Database is empty. Loading initial country data...');
+    await importCountriesFromApi();
+  } else {
+    devLog(`Database already contains ${result.count} countries.`);
+  }
 }

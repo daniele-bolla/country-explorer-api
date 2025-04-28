@@ -7,9 +7,13 @@ import routes from './routes/index';
 import { db } from './db';
 import { count } from 'drizzle-orm';
 import { countriesTable } from './db/schema';
-import { importCountriesFromApi } from './services/ImportCountriesService';
+import {
+  importCountriesFromApi,
+  importCountriesIfEmptyDB,
+} from './services/ImportCountriesService';
 import HapiPino from 'hapi-pino';
 import { devLog } from './utils/devLog';
+import { clearDatabase } from './testutils/clearDatabase';
 
 export let server: Server;
 export const init = async (serverPort?: number) => {
@@ -52,14 +56,7 @@ export const init = async (serverPort?: number) => {
 
   await routes(server);
   try {
-    const [result] = await db.select({ count: count() }).from(countriesTable);
-
-    if (result.count === 0) {
-      devLog('Database is empty. Loading initial country data...');
-      await importCountriesFromApi();
-    } else {
-      devLog(`Database already contains ${result.count} countries.`);
-    }
+    await importCountriesIfEmptyDB();
   } catch (error) {
     server.logger.error('Error checking/loading initial data:', error);
   }

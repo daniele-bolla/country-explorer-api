@@ -60,6 +60,8 @@ docker-compose up -d
 
 ```bash
 npm run db:push
+```
+```bash
 npm run db:push:test
 ```
 3. Install:
@@ -202,6 +204,8 @@ Unit tests (mocked) run on separate DB.
 
 ```bash
 npm run db:show
+```
+```bash
 npm run db:show:test
 ```
 

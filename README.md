@@ -62,18 +62,26 @@ docker-compose up -d
 npm run db:push
 npm run db:push:test
 ```
+3. Install:
 
-2. Start the webserver:
+```bash
+npm install
+```
+4. Start the webserver:
 
 ```bash
 npm run dev
 ```
 
-3. Test:
+5. Test:
 
 ```bash
 npm run test
 ```
+
+### Installation Warning
+
+**Do not** run `npm audit fix --force`. It will install an outdated version of `drizzle-kit`.
 
 # Swagger
 
@@ -210,7 +218,3 @@ Caching isn’t implemented yet, but i was planning to use Redis with Catbox.
 ### Switching from Joi to Zod
 
 Although Hapi recommends Joi, but would be better switching to Zod for its features (infer types).
-
-### Installation Warning
-
-**Do not** run `npm audit fix --force`. It will install an outdated version of `drizzle-kit`.
